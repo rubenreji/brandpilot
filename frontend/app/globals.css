@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --navy-primary: #101827;
+    --navy-secondary: #19263A;
+    --accent-blue: #3978E8;
+    --accent-blue-hover: #2B64C9;
+    --bg-main: #F6F8FC;
+    --surface-white: #FFFFFF;
+    --text-primary: #172033;
+    --text-secondary: #758195;
+    --border-subtle: #E2E8F0;
+    --success: #16A36A;
+    --warning: #E9A23B;
+    --danger: #DC5353;
+  }
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Text Highlighting for Correction Workspace */
+.highlight-critical {
+  background-color: #FEE2E2;
+  border-bottom: 2px solid #DC2626;
+  padding: 1px 3px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.highlight-high {
+  background-color: #FEF3C7;
+  border-bottom: 2px solid #D97706;
+  padding: 1px 3px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.highlight-medium {
+  background-color: #E0E7FF;
+  border-bottom: 2px solid #4F46E5;
+  padding: 1px 3px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.highlight-low {
+  background-color: #F1F5F9;
+  border-bottom: 2px solid #64748B;
+  padding: 1px 3px;
+  border-radius: 2px;
+  cursor: pointer;
+}
