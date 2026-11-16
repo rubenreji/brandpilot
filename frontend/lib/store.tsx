@@ -154,17 +154,85 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     return DEMO_WORKSPACE;
   });
 
-  // Knowledge base state
-  const [guidelines, setGuidelines] = useState<GuidelineDocument[]>(INITIAL_GUIDELINES);
-  const [facts, setFacts] = useState<ApprovedFact[]>(INITIAL_FACTS);
-  const [terminology, setTerminology] = useState<TerminologyRule[]>(INITIAL_TERMINOLOGY);
-  const [toneProfile, setToneProfile] = useState<ToneProfile>(INITIAL_TONE);
+  // Knowledge base state with local storage persistence
+  const [guidelines, setGuidelines] = useState<GuidelineDocument[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_guidelines');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_GUIDELINES;
+  });
+
+  const [facts, setFacts] = useState<ApprovedFact[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_facts');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_FACTS;
+  });
+
+  const [terminology, setTerminology] = useState<TerminologyRule[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_terminology');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_TERMINOLOGY;
+  });
+
+  const [toneProfile, setToneProfile] = useState<ToneProfile>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_tone');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_TONE;
+  });
+
   const [assets, setAssets] = useState<BrandAsset[]>(INITIAL_ASSETS);
 
-  // Submissions & Findings
-  const [submissions, setSubmissions] = useState<ContentSubmission[]>(INITIAL_SUBMISSIONS);
-  const [findings, setFindings] = useState<Record<string, ComplianceFinding[]>>(INITIAL_FINDINGS);
+  // Submissions & Findings with persistence across page navigation and refresh
+  const [submissions, setSubmissions] = useState<ContentSubmission[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_submissions');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_SUBMISSIONS;
+  });
+
+  const [findings, setFindings] = useState<Record<string, ComplianceFinding[]>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_findings');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_FINDINGS;
+  });
+
   const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+
+  // Auto-sync state to localStorage for true enterprise persistence
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('brandpilot_guidelines', JSON.stringify(guidelines));
+        localStorage.setItem('brandpilot_facts', JSON.stringify(facts));
+        localStorage.setItem('brandpilot_terminology', JSON.stringify(terminology));
+        localStorage.setItem('brandpilot_tone', JSON.stringify(toneProfile));
+        localStorage.setItem('brandpilot_submissions', JSON.stringify(submissions));
+        localStorage.setItem('brandpilot_findings', JSON.stringify(findings));
+      } catch {}
+    }
+  }, [guidelines, facts, terminology, toneProfile, submissions, findings]);
 
   // Toast notification queue
   const [toasts, setToasts] = useState<ToastMessage[]>([]);

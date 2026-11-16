@@ -79,8 +79,8 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
     }
   };
 
-  // Handle document file upload (DOCX, PDF, TXT, MD)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle document file upload (DOCX, PDF, TXT, MD) with multi-page support
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setUploadedFileName(file.name);
@@ -88,6 +88,30 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
         setTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
       }
 
+      showToast(`Parsing multi-page document (${file.name})...`, 'info');
+
+      // 1. Try high-fidelity multi-page serverless API extraction
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/extract', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.text && data.text.trim().length > 0) {
+            setContentBody(data.text.trim());
+            showToast(`Extracted ${data.page_count} pages (${data.word_count} words) from ${file.name}!`, 'success');
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('API extraction unavailable, attempting client-side fallback:', apiErr);
+      }
+
+      // 2. Client-side extraction fallback
       if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
         const reader = new FileReader();
         reader.onload = ev => {
@@ -101,13 +125,13 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
         reader.onload = async (ev) => {
           try {
             const arrayBuffer = ev.target?.result as ArrayBuffer;
-            // Dynamically import mammoth so it runs smoothly on client side
             const mammoth = await import('mammoth');
             const result = await mammoth.extractRawText({ arrayBuffer });
             const extracted = result.value.trim();
             if (extracted) {
               setContentBody(extracted);
-              showToast(`Extracted ${extracted.split(/\s+/).length} words from ${file.name} successfully!`, 'success');
+              const words = extracted.split(/\s+/).filter(Boolean).length;
+              showToast(`Extracted ${words} words from ${file.name} successfully!`, 'success');
             } else {
               showToast(`No text found in ${file.name}.`, 'info');
             }
@@ -118,22 +142,17 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
         };
         reader.readAsArrayBuffer(file);
       } else {
-        // PDF or other documents
+        // PDF or other documents client-side fallback
         const reader = new FileReader();
         reader.onload = (ev) => {
           const text = ev.target?.result as string;
-          // Simple heuristic to extract readable text stream chunks from PDF
-          const matches = text.match(/[A-Za-z0-9 ,.?!:;'"\-\n\r]{4,}/g);
+          const matches = text ? text.match(/[A-Za-z0-9 ,.?!:;'"\-\n\r]{4,}/g) : null;
           const extracted = matches ? matches.filter(s => s.trim().length > 15).join('\n\n') : '';
           if (extracted && extracted.length > 50) {
-            setContentBody(extracted.substring(0, 5000));
-            showToast(`Extracted text sections from ${file.name}!`, 'success');
+            setContentBody(extracted);
+            showToast(`Extracted readable text sections from ${file.name}!`, 'success');
           } else {
-            const sample = file.name.toLowerCase().includes('clean') || file.name.toLowerCase().includes('approved')
-              ? sampleCompliant
-              : sampleNonCompliant;
-            setContentBody(sample);
-            showToast(`Loaded content from ${file.name}!`, 'success');
+            showToast(`Could not read binary format. Please upload DOCX or TXT format.`, 'error');
           }
         };
         reader.readAsText(file);

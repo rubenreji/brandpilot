@@ -46,6 +46,13 @@ export default function CorrectionStudioPage() {
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [submissionNote, setSubmissionNote] = useState('');
 
+  // Keep manual text in sync when automated suggestions are accepted or updated
+  React.useEffect(() => {
+    if (submission?.current_text) {
+      setManualText(submission.current_text);
+    }
+  }, [submission?.current_text]);
+
   if (!submission) {
     return (
       <div className="p-8 text-center">
