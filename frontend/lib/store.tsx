@@ -99,11 +99,17 @@ interface BrandPilotContextType {
     check_categories?: string[];
   }) => Promise<string>; // returns submission id
 
-  // Correction Studio
+  // Correction Studio & Live AI Analysis
+  analyzeTextRealtime: (text: string, submissionId?: string) => { findings: ComplianceFinding[]; score: number };
+  createLiveSubmission: (title: string, text: string) => string;
   applySuggestion: (submissionId: string, findingId: string, customText?: string) => Promise<void>;
   applyAllSuggestions: (submissionId: string) => Promise<void>;
   rejectFinding: (submissionId: string, findingId: string) => Promise<void>;
   updateDraftText: (submissionId: string, newText: string) => void;
+
+  // Account Workflow & User Switching
+  switchAccount: (userIdOrRole: string) => void;
+  availableUsers: UserProfile[];
 
   // Approval Workflow (Human In The Loop)
   submitForApproval: (submissionId: string, note?: string) => Promise<void>;
@@ -116,6 +122,8 @@ interface BrandPilotContextType {
   // Notifications
   notifications: Notification[];
   markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: (userId?: string) => void;
+  resetAllTrackers: () => void;
 
   // Visual Assets
   inspectColor: (hex: string) => { isCompliant: boolean; nearestBrandColor?: string; deltaE?: number };
@@ -160,7 +168,16 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('brandpilot_guidelines');
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed: GuidelineDocument[] = JSON.parse(stored);
+          const missing = INITIAL_GUIDELINES.filter(ig => !parsed.some(p => p.id === ig.id));
+          if (missing.length > 0) {
+            const merged = [...parsed, ...missing];
+            localStorage.setItem('brandpilot_guidelines', JSON.stringify(merged));
+            return merged;
+          }
+          return parsed;
+        }
       } catch {}
     }
     return INITIAL_GUIDELINES;
@@ -170,7 +187,16 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('brandpilot_facts');
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed: ApprovedFact[] = JSON.parse(stored);
+          const missing = INITIAL_FACTS.filter(item => !parsed.some(p => p.id === item.id));
+          if (missing.length > 0) {
+            const merged = [...parsed, ...missing];
+            localStorage.setItem('brandpilot_facts', JSON.stringify(merged));
+            return merged;
+          }
+          return parsed;
+        }
       } catch {}
     }
     return INITIAL_FACTS;
@@ -180,7 +206,16 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('brandpilot_terminology');
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed: TerminologyRule[] = JSON.parse(stored);
+          const missing = INITIAL_TERMINOLOGY.filter(item => !parsed.some(p => p.id === item.id));
+          if (missing.length > 0) {
+            const merged = [...parsed, ...missing];
+            localStorage.setItem('brandpilot_terminology', JSON.stringify(merged));
+            return merged;
+          }
+          return parsed;
+        }
       } catch {}
     }
     return INITIAL_TERMINOLOGY;
@@ -198,9 +233,24 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
 
   const [assets, setAssets] = useState<BrandAsset[]>(INITIAL_ASSETS);
 
+  // Reset check for fresh hackathon baseline: start tracking from first user action
+  const isResetDone = () => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('brandpilot_trackers_reset_v3') === 'true';
+  };
+
   // Submissions & Findings with persistence across page navigation and refresh
   const [submissions, setSubmissions] = useState<ContentSubmission[]>(() => {
     if (typeof window !== 'undefined') {
+      if (!isResetDone()) {
+        try {
+          localStorage.removeItem('brandpilot_submissions');
+          localStorage.removeItem('brandpilot_findings');
+          localStorage.removeItem('brandpilot_notifications');
+          localStorage.setItem('brandpilot_trackers_reset_v3', 'true');
+        } catch {}
+        return [];
+      }
       try {
         const stored = localStorage.getItem('brandpilot_submissions');
         if (stored) return JSON.parse(stored);
@@ -211,6 +261,7 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
 
   const [findings, setFindings] = useState<Record<string, ComplianceFinding[]>>(() => {
     if (typeof window !== 'undefined') {
+      if (!isResetDone()) return {};
       try {
         const stored = localStorage.getItem('brandpilot_findings');
         if (stored) return JSON.parse(stored);
@@ -219,7 +270,32 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     return INITIAL_FINDINGS;
   });
 
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    if (typeof window !== 'undefined') {
+      if (!isResetDone()) return [];
+      try {
+        const stored = localStorage.getItem('brandpilot_notifications');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_NOTIFICATIONS;
+  });
+
+  // Dedicated manual tracker reset: wipes all logs and resumes tracking from first new action
+  const resetAllTrackers = () => {
+    setSubmissions([]);
+    setFindings({});
+    setNotifications([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('brandpilot_submissions');
+        localStorage.removeItem('brandpilot_findings');
+        localStorage.removeItem('brandpilot_notifications');
+        localStorage.setItem('brandpilot_trackers_reset_v3', 'true');
+      } catch {}
+    }
+    showToast('All trackers and audit logs reset. Tracking will start from your next action!', 'info');
+  };
 
   // Auto-sync state to localStorage for true enterprise persistence
   useEffect(() => {
@@ -231,9 +307,10 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         localStorage.setItem('brandpilot_tone', JSON.stringify(toneProfile));
         localStorage.setItem('brandpilot_submissions', JSON.stringify(submissions));
         localStorage.setItem('brandpilot_findings', JSON.stringify(findings));
+        localStorage.setItem('brandpilot_notifications', JSON.stringify(notifications));
       } catch {}
     }
-  }, [guidelines, facts, terminology, toneProfile, submissions, findings]);
+  }, [guidelines, facts, terminology, toneProfile, submissions, findings, notifications]);
 
   // Toast notification queue
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -257,6 +334,35 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     if (demo && currentUser.id.startsWith('user-')) {
       setCurrentUser(demo);
     }
+  };
+
+  // Dedicated Account Switcher (supports user ID, role, or email)
+  const switchAccount = (userIdOrRole: string) => {
+    let target = registeredUsers.find(u => u.id === userIdOrRole);
+    if (!target) {
+      target = DEMO_USERS[userIdOrRole as UserRole] || registeredUsers.find(u => u.role === userIdOrRole);
+    }
+    if (!target) {
+      target = registeredUsers.find(u => u.email.toLowerCase() === userIdOrRole.toLowerCase());
+    }
+
+    if (target) {
+      setCurrentUser(target);
+      setCurrentRole(target.role);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('brandpilot_current_user', JSON.stringify(target));
+        localStorage.setItem('brandpilot_current_role', target.role);
+      }
+      showToast(`Active account switched to ${target.full_name || target.name} (${target.role.toUpperCase()})`, 'info');
+    }
+  };
+
+  const markAllNotificationsRead = (userId?: string) => {
+    const targetUserId = userId || currentUser.id;
+    setNotifications(prev =>
+      prev.map(n => (n.user_id === targetUserId ? { ...n, is_read: true } : n))
+    );
+    showToast('All notifications marked as read.', 'success');
   };
 
   // Account creation: Register new enterprise account
@@ -552,21 +658,308 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
   const getSubmission = (id: string) => submissions.find(s => s.id === id);
   const getSubmissionFindings = (id: string) => findings[id] || [];
 
+  // Real-time AI brand governance audit engine
+  const analyzeTextRealtime = (text: string, subId?: string): { findings: ComplianceFinding[]; score: number } => {
+    const activeSubId = subId || `sub-${Date.now()}`;
+    const detected: ComplianceFinding[] = [];
+
+    if (!text || !text.trim()) {
+      return { findings: [], score: 100 };
+    }
+
+    // 1. Terminology Rules from Active Knowledge Base
+    terminology.forEach(term => {
+      if (!term.term) return;
+      const flags = term.case_sensitive || term.is_case_sensitive ? 'g' : 'gi';
+      const escaped = term.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escaped}\\b`, flags);
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        if (!detected.some(f => Math.abs(f.start_index - match!.index) < 2)) {
+          detected.push({
+            id: `find-term-${Date.now()}-${detected.length}`,
+            submission_id: activeSubId,
+            category: 'terminology',
+            severity: term.rule_type === 'prohibited' ? 'high' : 'medium',
+            original_text: match[0],
+            start_index: match.index,
+            end_index: match.index + match[0].length,
+            explanation: `The term '${match[0]}' violates active terminology policy. ${term.explanation || term.rule_description || 'Prohibited in enterprise communications.'}`,
+            relevant_brand_rule: `Terminology Policy: ${term.rule_type.toUpperCase()} Rule for '${term.term}'`,
+            source_document: 'AuraCloud Global Brand & Communication Manual v2.4',
+            page_reference: 'Section 3.4',
+            exact_supporting_passage: 'Nomenclature Rules: Prohibited expressions must be replaced with approved nomenclature.',
+            suggested_correction: term.suggested_replacement || term.preferred_alternative || 'approved terminology',
+            confidence: 1.0,
+            status: 'pending'
+          });
+        }
+      }
+    });
+
+    // 2. Comprehensive Pre-compiled Governance & Legal Rules
+    const governanceRules = [
+      {
+        pattern: /India'?s\s+No\.?\s*1/i,
+        category: 'unsupported_claim' as const,
+        severity: 'high' as const,
+        rule: 'Factual Claims Policy 4.2: Prohibited Market Superlatives',
+        page: 'Page 22, Section 4.2',
+        passage: "Section 4.2: Factual Claims Policy: Unsubstantiated market leadership claims ('No. 1', 'cheapest') expose the company to regulatory censure and are prohibited.",
+        expl: "Unsupported market leadership ranking. Market position claims must cite dated third-party analyst recognition (e.g. Gartner, IDC).",
+        repl: 'a leading enterprise cloud platform'
+      },
+      {
+        pattern: /\b(?:world'?s\s+best|best(?:\s+in\s+class|\s+solution|\s+platform))\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'high' as const,
+        rule: 'Factual Claims Policy 4.2: Unsubstantiated Superlatives',
+        page: 'Page 22, Section 4.2',
+        passage: 'Section 4.2: Avoid unsubstantiated superlatives such as best in class without empirical citations.',
+        expl: 'Unverified superlative. Enterprise communications require objective, qualification-based language.',
+        repl: 'high-performance enterprise solution'
+      },
+      {
+        pattern: /\bNo\.?\s*1\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'high' as const,
+        rule: 'Factual Claims Policy 4.2: Prohibited Market Superlatives',
+        page: 'Page 22, Section 4.2',
+        passage: 'Section 4.2: Unsubstantiated rankings without third-party citations expose the company to liability.',
+        expl: 'Unsubstantiated market ranking.',
+        repl: 'industry-recognized'
+      },
+      {
+        pattern: /\b(?:AI\s*magic|magic|superpowers?)\b/i,
+        category: 'terminology' as const,
+        severity: 'high' as const,
+        rule: "Terminology Policy: Prohibited Term 'AI magic'",
+        page: 'Page 15, Section 3.4',
+        passage: "Section 3.4: Nomenclature Rules: Never refer to our capabilities as 'AI magic'. Use 'automated cloud orchestration' or 'predictive optimization'.",
+        expl: "Vague, unscientific marketing buzzword. It trivializes enterprise software engineering and violates brand voice standards.",
+        repl: 'intelligent automated orchestration'
+      },
+      {
+        pattern: /guarantees?\s+(?:100%|complete)\s+accuracy/i,
+        category: 'unsupported_claim' as const,
+        severity: 'critical' as const,
+        rule: 'Legal Compliance Standard: Prohibited Absolute Guarantees',
+        page: 'Page 22, Section 4.2',
+        passage: 'Section 4.2: Never state absolute guarantees, unsupported rankings, or exaggerated superlatives. All product descriptions must reflect verifiable specifications.',
+        expl: 'Absolute performance guarantee. Legally prohibited under our compliance guidelines without qualified warranty limits and SLA bounds.',
+        repl: 'delivers high-reliability automated verification'
+      },
+      {
+        pattern: /\b(?:100%\s+guaranteed|guarantees?\s+100%)\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'critical' as const,
+        rule: 'Legal Compliance Standard: Prohibited Absolute Guarantees',
+        page: 'Page 22, Section 4.2',
+        passage: 'Section 4.2: Absolute guarantees without disclaimer text trigger immediate legal compliance review.',
+        expl: 'Absolute guarantee requires formal legal disclaimer.',
+        repl: 'provides high assurance SLA backing'
+      },
+      {
+        pattern: /cheapest\s+(?:solution|platform|pricing|alternative)(?:\s+available)?/i,
+        category: 'unsupported_claim' as const,
+        severity: 'critical' as const,
+        rule: 'Factual Claims Policy 4.2: Comparative Pricing',
+        page: 'Page 22, Section 4.2',
+        passage: "Section 4.2: Comparative pricing claims ('cheapest') without published competitive benchmarking invite regulatory scrutiny.",
+        expl: 'Unsubstantiated comparative pricing claim. Price superlatives require a defined competitor benchmark and active pricing audit.',
+        repl: 'cost-effective enterprise solution'
+      },
+      {
+        pattern: /\b(?:cheapest|lowest\s+price)\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'high' as const,
+        rule: 'Factual Claims Policy 4.2: Comparative Pricing',
+        page: 'Page 22, Section 4.2',
+        passage: 'Section 4.2: Pricing claims must reflect premium enterprise positioning rather than commodity discounting.',
+        expl: 'Violates enterprise value proposition guidelines.',
+        repl: 'cost-efficient'
+      },
+      {
+        pattern: /\bauracloud\b/,
+        category: 'terminology' as const,
+        severity: 'medium' as const,
+        rule: 'Brand Nomenclature Policy 3.4: Capitalization Standard',
+        page: 'Page 15, Section 3.4',
+        passage: "Section 3.4: Nomenclature Rules: AuraCloud must always appear in camel-case. Derivatives such as 'auracloud' are prohibited.",
+        expl: "Incorrect brand capitalization. AuraCloud must always be capitalized with capital 'A' and capital 'C'.",
+        repl: 'AuraCloud'
+      },
+      {
+        pattern: /\b100%\s+uptime\b/i,
+        category: 'outdated_fact' as const,
+        severity: 'critical' as const,
+        rule: 'Corporate SLA Standard 2026: Approved Uptime Bound',
+        page: 'Page 8, Section 2.1',
+        passage: 'AuraCloud standard enterprise SLA guarantees 99.95% monthly uptime. Claims of 100% uptime are non-compliant.',
+        expl: "Contradicts approved corporate facts. AuraCloud's verified SLA is 99.95% monthly uptime.",
+        repl: '99.95% monthly uptime SLA'
+      },
+      {
+        pattern: /\bcloud\s+supremacy\b/i,
+        category: 'tone_mismatch' as const,
+        severity: 'medium' as const,
+        rule: 'Tone of Voice Guide: Professionalism & Humility',
+        page: 'Page 18, Section 4.0',
+        passage: 'Maintain an authoritative, evidence-based tone. Avoid combative or hyper-aggressive expressions such as supremacy.',
+        expl: 'Violates enterprise tone guidelines. Replace hyper-aggressive phrasing with collaborative value proposition.',
+        repl: 'cloud governance excellence'
+      },
+      {
+        pattern: /\bclick\s+here\b/i,
+        category: 'accessibility' as const,
+        severity: 'medium' as const,
+        rule: 'Digital Accessibility Standard WCAG 2.1: Meaningful Link Text',
+        page: 'Page 28, Section 5.3',
+        passage: 'Non-descriptive hyperlinks such as "click here" fail accessibility benchmarks. Use meaningful descriptive labels describing the destination.',
+        expl: 'Accessibility finding: Non-descriptive anchor text degrades screen reader navigation.',
+        repl: 'explore our cloud architecture documentation'
+      },
+      {
+        pattern: /\b(?:unhackable|100%\s+secure|impervious\s+to\s+attacks?)\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'critical' as const,
+        rule: 'Security Communications Standard: Qualified Defense Claims',
+        page: 'Page 30, Section 6.1',
+        passage: 'Section 6.1: Absolute security assertions are mathematically false and expose the firm to critical breach liability.',
+        expl: 'Absolute security claims are legally prohibited. Use defense-in-depth qualifications.',
+        repl: 'zero-trust architecture with defense-in-depth isolation'
+      },
+      {
+        pattern: /\b(?:military-grade(?:\s+encryption)?|bulletproof(?:\s+security)?)\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'high' as const,
+        rule: 'Security Policy 4.2: Prohibited Exaggerated Security Metaphors',
+        page: 'Section 4.2',
+        passage: 'Section 4.2: Marketing clichés such as military-grade or bulletproof lack technical definition. Specify actual ciphers (FIPS 140-3 validated AES-256-GCM).',
+        expl: 'Exaggerated security claim. Replace informal buzzwords with verified cryptographic standards.',
+        repl: 'FIPS 140-3 validated AES-256-GCM encryption with HSM keys'
+      },
+      {
+        pattern: /\b(?:zero\s+latency|instantaneous(?:\s+routing)?)\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'high' as const,
+        rule: 'Performance SLA Standard 3.1: Latency Specifications',
+        page: 'Section 3.1',
+        passage: 'Section 3.1: Network propagation cannot achieve zero latency. Always quote verified empirical percentiles (median 1.8ms, p99 < 4.2ms).',
+        expl: 'Physical propagation limits prevent zero latency. Always quote verified p99 latency benchmarks.',
+        repl: 'deterministic sub-5 millisecond median latency'
+      },
+      {
+        pattern: /\b(?:infinite\s+scal(?:e|ability)|unlimited\s+scale)\b/i,
+        category: 'unsupported_claim' as const,
+        severity: 'high' as const,
+        rule: 'Architecture Scale Standard 3.1: Horizontal Autoscaling Bounds',
+        page: 'Section 3.1',
+        passage: 'Section 3.1: Unbounded scalability claims lack engineering veracity. Cite verified load-test thresholds (2.4M RPS per cluster).',
+        expl: 'Unbounded scaling claims are unverified. Cite empirical load-test throughput.',
+        repl: 'elastic horizontal autoscaling supporting 1M+ concurrent RPS'
+      },
+      {
+        pattern: /\b(?:master\s*\/\s*slave|whitelist|blacklist)\b/i,
+        category: 'terminology' as const,
+        severity: 'medium' as const,
+        rule: 'Inclusive Terminology Policy 7.1: DEI Standards',
+        page: 'Section 7.1',
+        passage: 'Section 7.1: Replace archaic technical metaphors with inclusive, clear terminology: primary/secondary and allowlist/denylist.',
+        expl: 'Non-inclusive technical nomenclature prohibited under AuraCloud engineering standards.',
+        repl: 'primary/secondary (or allowlist/denylist)'
+      }
+    ];
+
+    governanceRules.forEach(item => {
+      const match = item.pattern.exec(text);
+      if (match && !detected.some(f => Math.abs(f.start_index - match!.index) < 3)) {
+        detected.push({
+          id: `find-rule-${Date.now()}-${detected.length}`,
+          submission_id: activeSubId,
+          category: item.category,
+          severity: item.severity,
+          original_text: match[0],
+          start_index: match.index,
+          end_index: match.index + match[0].length,
+          explanation: item.expl,
+          relevant_brand_rule: item.rule,
+          source_document: 'AuraCloud Global Brand & Communication Manual v2.4',
+          page_reference: item.page,
+          exact_supporting_passage: item.passage,
+          suggested_correction: item.repl,
+          confidence: 0.98,
+          status: 'pending'
+        });
+      }
+    });
+
+    const criticalDeduction = detected.filter(f => f.severity === 'critical').length * 20;
+    const highDeduction = detected.filter(f => f.severity === 'high').length * 10;
+    const mediumDeduction = detected.filter(f => f.severity === 'medium').length * 5;
+    const score = detected.length === 0 ? 100 : Math.max(12, 100 - (criticalDeduction + highDeduction + mediumDeduction));
+
+    return { findings: detected, score };
+  };
+
+  const createLiveSubmission = (title: string, text: string): string => {
+    const id = `sub-${Date.now()}`;
+    const analysis = analyzeTextRealtime(text, id);
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+    const newSub: ContentSubmission = {
+      id,
+      organization_id: currentWorkspace.id,
+      title: title.trim() || 'Live Draft Content',
+      content_type: 'press_release',
+      campaign_name: 'Brand Verification',
+      original_text: text,
+      current_text: text,
+      status: 'audited',
+      word_count: words,
+      character_count: text.length,
+      compliance_score: analysis.score,
+      creator_id: currentUser.id,
+      creator_name: currentUser.full_name || currentUser.name || 'Marcus Vance',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      findings_count: analysis.findings.length,
+      critical_count: analysis.findings.filter(f => f.severity === 'critical').length
+    };
+
+    setSubmissions(prev => [newSub, ...prev]);
+    setFindings(prev => ({
+      ...prev,
+      [id]: analysis.findings
+    }));
+
+    return id;
+  };
+
   const updateDraftText = (submissionId: string, newText: string) => {
+    const analysis = analyzeTextRealtime(newText, submissionId);
+    const words = newText.trim() ? newText.trim().split(/\s+/).length : 0;
+
     setSubmissions(prev =>
       prev.map(s => {
         if (s.id !== submissionId) return s;
-        const words = newText.trim() ? newText.trim().split(/\s+/).length : 0;
         return {
           ...s,
           current_text: newText,
           word_count: words,
           character_count: newText.length,
+          compliance_score: analysis.score,
+          findings_count: analysis.findings.length,
+          critical_count: analysis.findings.filter(f => f.severity === 'critical').length,
           updated_at: new Date().toISOString()
         };
       })
     );
-    showToast('Draft text updated manually.', 'info');
+
+    setFindings(prev => ({
+      ...prev,
+      [submissionId]: analysis.findings
+    }));
   };
 
   // Run brand compliance audit (Triple-Layer AI Engine: Deterministic + RAG + Contextual LLM + Accessibility)
@@ -619,164 +1012,9 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     }
 
     // 2. High-precision client-side deterministic and semantic engine fallback
-    const detectedFindings: ComplianceFinding[] = [];
-
-    // Check prohibited and preferred terminology rules from active knowledge base
-    terminology.forEach(term => {
-      const regex = new RegExp(`\\b${term.term}\\b`, term.case_sensitive || term.is_case_sensitive ? 'g' : 'gi');
-      let match;
-      while ((match = regex.exec(data.text)) !== null) {
-        detectedFindings.push({
-          id: `find-term-${Date.now()}-${detectedFindings.length}`,
-          submission_id: submissionId,
-          category: 'terminology',
-          severity: term.rule_type === 'prohibited' ? 'high' : 'medium',
-          original_text: match[0],
-          start_index: match.index,
-          end_index: match.index + match[0].length,
-          explanation: `The term '${match[0]}' violates active terminology policy. ${term.explanation || term.rule_description || 'Prohibited in enterprise communications.'}`,
-          relevant_brand_rule: `Terminology Policy: ${term.rule_type.toUpperCase()} Rule for '${term.term}'`,
-          source_document: 'AuraCloud Global Brand & Communication Manual v2.4',
-          page_reference: 'Section 3.4',
-          exact_supporting_passage: 'Nomenclature Rules: Prohibited expressions must be replaced with approved nomenclature in all formal communications.',
-          suggested_correction: term.suggested_replacement || term.preferred_alternative || 'approved terminology',
-          confidence: 1.0,
-          status: 'pending'
-        });
-      }
-    });
-
-    // Check superlative, absolute guarantees, and SLA claims
-    const claimChecks = [
-      {
-        pattern: /India'?s\s+No\.?\s*1/i,
-        text: "India's No. 1",
-        category: 'unsupported_claim' as const,
-        severity: 'high' as const,
-        rule: 'Factual Claims Policy 4.2: Prohibited Market Superlatives',
-        page: 'Page 22, Section 4.2',
-        passage: "Section 4.2: Factual Claims Policy: Unsubstantiated market leadership claims ('No. 1', 'cheapest') expose the company to regulatory censure and are prohibited.",
-        expl: "Unsupported market leadership ranking. Market position claims must cite dated third-party analyst recognition (e.g. Gartner, IDC).",
-        repl: "a leading enterprise cloud platform"
-      },
-      {
-        pattern: /\bNo\.?\s*1\b/i,
-        text: "No. 1",
-        category: 'unsupported_claim' as const,
-        severity: 'high' as const,
-        rule: 'Factual Claims Policy 4.2: Prohibited Market Superlatives',
-        page: 'Page 22, Section 4.2',
-        passage: "Section 4.2: Unsubstantiated rankings without third-party citations expose the company to liability.",
-        expl: "Unsubstantiated market ranking.",
-        repl: "industry-recognized"
-      },
-      {
-        pattern: /AI\s*magic/i,
-        text: "AI magic",
-        category: 'terminology' as const,
-        severity: 'high' as const,
-        rule: "Terminology Policy: Prohibited Term 'AI magic'",
-        page: 'Page 15, Section 3.4',
-        passage: "Section 3.4: Nomenclature Rules: Never refer to our capabilities as 'AI magic'. Use 'automated cloud orchestration' or 'predictive optimization'.",
-        expl: "The phrase 'AI magic' is explicitly prohibited. It trivializes enterprise software engineering and violates brand voice standards.",
-        repl: "intelligent automated orchestration"
-      },
-      {
-        pattern: /guarantees\s+100%\s+accuracy/i,
-        text: "guarantees 100% accuracy",
-        category: 'unsupported_claim' as const,
-        severity: 'critical' as const,
-        rule: 'Legal Compliance Standard: Prohibited Absolute Guarantees',
-        page: 'Page 22, Section 4.2',
-        passage: "Section 4.2: Never state absolute guarantees, unsupported rankings, or exaggerated superlatives. All product descriptions must reflect verifiable specifications.",
-        expl: "Absolute performance guarantee. Legally prohibited under our compliance guidelines without qualified warranty limits and SLA bounds.",
-        repl: "delivers high-reliability automated verification"
-      },
-      {
-        pattern: /cheapest\s+solution(?:\s+available)?/i,
-        text: "cheapest solution available",
-        category: 'unsupported_claim' as const,
-        severity: 'critical' as const,
-        rule: 'Factual Claims Policy 4.2: Comparative Pricing',
-        page: 'Page 22, Section 4.2',
-        passage: "Section 4.2: Comparative pricing claims ('cheapest') without published competitive benchmarking invite regulatory scrutiny.",
-        expl: "Unsubstantiated comparative pricing claim. Price superlatives require a defined competitor benchmark and active pricing audit.",
-        repl: "cost-effective enterprise solution"
-      },
-      {
-        pattern: /\bauracloud\b/,
-        text: "auracloud",
-        category: 'terminology' as const,
-        severity: 'medium' as const,
-        rule: 'Brand Nomenclature Policy 3.4: Capitalization Standard',
-        page: 'Page 15, Section 3.4',
-        passage: "Section 3.4: Nomenclature Rules: AuraCloud must always appear in camel-case. Derivatives such as 'auracloud' are prohibited.",
-        expl: "Incorrect brand capitalization. AuraCloud must always be capitalized with capital 'A' and capital 'C'.",
-        repl: "AuraCloud"
-      },
-      {
-        pattern: /100%\s+uptime/i,
-        text: "100% uptime",
-        category: 'outdated_fact' as const,
-        severity: 'critical' as const,
-        rule: 'Corporate SLA Standard 2026: Approved Uptime Bound',
-        page: 'Page 8, Section 2.1',
-        passage: 'AuraCloud standard enterprise SLA guarantees 99.95% monthly uptime. Claims of 100% uptime are non-compliant.',
-        expl: "Contradicts approved corporate facts. AuraCloud's verified SLA is 99.95% monthly uptime.",
-        repl: "99.95% monthly uptime SLA"
-      },
-      {
-        pattern: /cloud\s+supremacy/i,
-        text: "cloud supremacy",
-        category: 'tone_mismatch' as const,
-        severity: 'medium' as const,
-        rule: 'Tone of Voice Guide: Professionalism & Humility',
-        page: 'Page 18, Section 4.0',
-        passage: 'Maintain an authoritative, evidence-based tone. Avoid combative or hyper-aggressive expressions such as supremacy.',
-        expl: "Violates enterprise tone guidelines. Replace hyper-aggressive phrasing with collaborative value proposition.",
-        repl: "cloud governance excellence"
-      },
-      {
-        pattern: /click\s+here\b/i,
-        text: "click here",
-        category: 'accessibility' as const,
-        severity: 'medium' as const,
-        rule: 'Digital Accessibility Standard WCAG 2.1: Meaningful Link Text',
-        page: 'Page 28, Section 5.3',
-        passage: 'Non-descriptive hyperlinks such as "click here" fail accessibility benchmarks. Use meaningful descriptive labels describing the destination.',
-        expl: 'Accessibility finding: Non-descriptive anchor text degrades screen reader navigation.',
-        repl: 'explore our cloud architecture documentation'
-      }
-    ];
-
-    claimChecks.forEach(item => {
-      const match = item.pattern.exec(data.text);
-      if (match && !detectedFindings.some(f => Math.abs(f.start_index - match.index) < 3)) {
-        detectedFindings.push({
-          id: `find-rule-${Date.now()}-${detectedFindings.length}`,
-          submission_id: submissionId,
-          category: item.category,
-          severity: item.severity,
-          original_text: match[0],
-          start_index: match.index,
-          end_index: match.index + match[0].length,
-          explanation: item.expl,
-          relevant_brand_rule: item.rule,
-          source_document: 'AuraCloud Global Brand & Communication Manual v2.4',
-          page_reference: item.page,
-          exact_supporting_passage: item.passage,
-          suggested_correction: item.repl,
-          confidence: 0.98,
-          status: 'pending'
-        });
-      }
-    });
-
-    // Calculate score
-    const criticalDeduction = detectedFindings.filter(f => f.severity === 'critical').length * 20;
-    const highDeduction = detectedFindings.filter(f => f.severity === 'high').length * 10;
-    const mediumDeduction = detectedFindings.filter(f => f.severity === 'medium').length * 5;
-    const score = Math.max(12, 100 - (criticalDeduction + highDeduction + mediumDeduction));
+    const analysis = analyzeTextRealtime(data.text, submissionId);
+    const detectedFindings = analysis.findings;
+    const score = analysis.score;
 
     const newSub: ContentSubmission = {
       id: submissionId,
@@ -1040,6 +1278,8 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         findings,
         getSubmission,
         getSubmissionFindings,
+        analyzeTextRealtime,
+        createLiveSubmission,
         runAudit,
         applySuggestion,
         applyAllSuggestions,
@@ -1047,8 +1287,12 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         updateDraftText,
         submitForApproval,
         reviewSubmission,
+        switchAccount,
+        availableUsers: registeredUsers,
         notifications,
         markNotificationRead,
+        markAllNotificationsRead,
+        resetAllTrackers,
         inspectColor,
         showToast
       }}

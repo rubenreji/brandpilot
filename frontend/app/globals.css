@@ -2,43 +2,61 @@
 
 @layer base {
   :root {
-    --navy-primary: #101827;
-    --navy-secondary: #19263A;
-    --accent-blue: #3978E8;
-    --accent-blue-hover: #2B64C9;
-    --bg-main: #F6F8FC;
-    --surface-white: #FFFFFF;
-    --text-primary: #172033;
-    --text-secondary: #758195;
-    --border-subtle: #E2E8F0;
-    --success: #16A36A;
-    --warning: #E9A23B;
-    --danger: #DC5353;
+    --navy-primary: #050806;
+    --navy-secondary: #0A110C;
+    --accent-blue: #10B981;
+    --accent-blue-hover: #059669;
+    --bg-main: #050806;
+    --surface-white: #0E1611;
+    --text-primary: #F9FAFB;
+    --text-secondary: #9CA3AF;
+    --border-subtle: #16261B;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
   }
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  background-color: var(--bg-main);
-  color: var(--text-primary);
+  background-color: #050806;
+  color: #F9FAFB;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
 }
 
-/* Custom Scrollbars */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Custom Scrollbars in Black & Emerald Neon */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #050806;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #153020;
   border-radius: 9999px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #10B981;
 }
 
 /* Smooth Premium Animations */
@@ -77,10 +95,10 @@ body {
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(57, 120, 232, 0.4);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(57, 120, 232, 0);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
   }
 }
 
@@ -110,7 +128,7 @@ body {
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 0.25) 50%, rgba(16, 185, 129, 0) 100%);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
@@ -122,7 +140,7 @@ body {
 
 .card-hover-effect:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 30px -6px rgba(16, 24, 39, 0.1);
+  box-shadow: 0 12px 30px -6px rgba(0, 255, 135, 0.12);
 }
 
 /* Micro-interaction utilities */
@@ -131,7 +149,7 @@ body {
 }
 .hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px -2px rgba(16, 24, 39, 0.08);
+  box-shadow: 0 6px 20px -2px rgba(16, 185, 129, 0.25);
 }
 .hover-lift:active {
   transform: translateY(0);
@@ -144,7 +162,7 @@ body {
   transform: scale(0.97);
 }
 
-/* Kinetic Animated Gradient Text */
+/* Kinetic Animated Gradient Text - Emerald & Mint */
 @keyframes gradientShift {
   0% {
     background-position: 0% 50%;
@@ -158,7 +176,7 @@ body {
 }
 
 .animate-gradient-text {
-  background: linear-gradient(90deg, #3978E8, #6366F1, #8B5CF6, #3978E8);
+  background: linear-gradient(90deg, #10B981, #00FF87, #34D399, #06B6D4, #10B981);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -215,42 +233,45 @@ body {
   animation: radarRipple 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
 }
 
-/* Text Highlighting for Correction Workspace */
+/* High-Contrast Highlights for Correction Workspace */
 .highlight-critical {
-  background-color: #FEE2E2;
-  border-bottom: 2px solid #DC2626;
+  background-color: rgba(239, 68, 68, 0.25);
+  border-bottom: 2px solid #EF4444;
+  color: #FECACA;
   padding: 2px 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .highlight-critical:hover {
-  background-color: #FECACA;
+  background-color: rgba(239, 68, 68, 0.4);
   transform: scale(1.02);
 }
 
 .highlight-high {
-  background-color: #FEF3C7;
-  border-bottom: 2px solid #D97706;
+  background-color: rgba(245, 158, 11, 0.25);
+  border-bottom: 2px solid #F59E0B;
+  color: #FDE68A;
   padding: 2px 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .highlight-high:hover {
-  background-color: #FDE68A;
+  background-color: rgba(245, 158, 11, 0.4);
   transform: scale(1.02);
 }
 
 .highlight-medium {
-  background-color: #E0E7FF;
-  border-bottom: 2px solid #4F46E5;
+  background-color: rgba(16, 185, 129, 0.25);
+  border-bottom: 2px solid #10B981;
+  color: #A7F3D0;
   padding: 2px 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .highlight-medium:hover {
-  background-color: #C7D2FE;
+  background-color: rgba(16, 185, 129, 0.4);
   transform: scale(1.02);
 }

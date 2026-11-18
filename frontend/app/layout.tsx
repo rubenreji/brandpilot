@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { BrandPilotProvider } from '@/lib/store';
@@ -13,6 +13,15 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
+  themeColor: '#050806'
+};
+
 export const metadata: Metadata = {
   title: 'BrandPilot — AI-Assisted Brand Governance and Content Intelligence Platform',
   description: 'Your brand guidelines, enforced intelligently. Centralized guidelines, approved facts, terminology management, and AI-assisted content auditing with human-controlled approval.',
@@ -24,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-[#F6F8FC] text-slate-900">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark w-full`}>
+      <body className="min-h-full w-full max-w-full overflow-x-hidden flex flex-col font-sans bg-[#050806] text-zinc-100 selection:bg-emerald-500 selection:text-black">
         <BrandPilotProvider>
           {children}
         </BrandPilotProvider>

@@ -107,6 +107,46 @@ export async function POST(request: Request) {
         passage: 'Non-descriptive hyperlinks such as "click here" fail accessibility benchmarks. Use meaningful descriptive labels describing the destination.',
         expl: 'Accessibility finding: Non-descriptive anchor text degrades screen reader navigation.',
         repl: 'explore our cloud architecture documentation'
+      },
+      {
+        pattern: /\b(?:unhackable|100%\s+secure|impervious\s+to\s+attacks?)\b/i,
+        category: 'unsupported_claim',
+        severity: 'critical',
+        rule: 'Security Communications Standard: Qualified Defense Claims',
+        page: 'Page 30, Section 6.1',
+        passage: 'Section 6.1: Absolute security assertions are mathematically false and expose the firm to critical breach liability.',
+        expl: 'Absolute security claims are legally prohibited. Use defense-in-depth qualifications.',
+        repl: 'zero-trust architecture with defense-in-depth isolation'
+      },
+      {
+        pattern: /\b(?:military-grade(?:\s+encryption)?|bulletproof(?:\s+security)?)\b/i,
+        category: 'unsupported_claim',
+        severity: 'high',
+        rule: 'Security Policy 4.2: Prohibited Exaggerated Security Metaphors',
+        page: 'Section 4.2',
+        passage: 'Section 4.2: Marketing clichés such as military-grade or bulletproof lack technical definition. Specify actual ciphers (FIPS 140-3 validated AES-256-GCM).',
+        expl: 'Exaggerated security claim. Replace informal buzzwords with verified cryptographic standards.',
+        repl: 'FIPS 140-3 validated AES-256-GCM encryption with HSM keys'
+      },
+      {
+        pattern: /\b(?:zero\s+latency|instantaneous(?:\s+routing)?)\b/i,
+        category: 'unsupported_claim',
+        severity: 'high',
+        rule: 'Performance SLA Standard 3.1: Latency Specifications',
+        page: 'Section 3.1',
+        passage: 'Section 3.1: Network propagation cannot achieve zero latency. Always quote verified empirical percentiles (median 1.8ms, p99 < 4.2ms).',
+        expl: 'Physical propagation limits prevent zero latency. Always quote verified p99 latency benchmarks.',
+        repl: 'deterministic sub-5 millisecond median latency'
+      },
+      {
+        pattern: /\b(?:infinite\s+scal(?:e|ability)|unlimited\s+scale)\b/i,
+        category: 'unsupported_claim',
+        severity: 'high',
+        rule: 'Architecture Scale Standard 3.1: Horizontal Autoscaling Bounds',
+        page: 'Section 3.1',
+        passage: 'Section 3.1: Unbounded scalability claims lack engineering veracity. Cite verified load-test thresholds (2.4M RPS per cluster).',
+        expl: 'Unbounded scaling claims are unverified. Cite empirical load-test throughput.',
+        repl: 'elastic horizontal autoscaling supporting 1M+ concurrent RPS'
       }
     ];
 

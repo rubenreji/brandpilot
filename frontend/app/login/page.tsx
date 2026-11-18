@@ -31,32 +31,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F8FC] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#050806] text-zinc-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-emerald-500 selection:text-black">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link href="/" className="inline-flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#101827] flex items-center justify-center text-white font-bold text-xl shadow-md border border-slate-700">
-            <span className="text-[#3978E8] font-black mr-0.5">B</span>P
+          <div className="w-10 h-10 rounded-xl bg-[#040705] flex items-center justify-center text-white font-bold text-xl shadow-md border border-emerald-500/40 shadow-[0_0_15px_rgba(0,255,135,0.2)]">
+            <span className="text-[#00FF87] font-black mr-0.5">B</span>P
           </div>
-          <span className="font-extrabold text-2xl text-slate-900 tracking-tight">BrandPilot</span>
+          <span className="font-extrabold text-2xl text-white tracking-tight">BrandPilot</span>
         </Link>
-        <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
+        <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-white">
           Sign in to your organization
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-zinc-400">
           Or{' '}
-          <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-500">
+          <Link href="/register" className="font-semibold text-emerald-400 hover:text-emerald-300">
             create a new enterprise workspace
           </Link>
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-sm border border-slate-200/80 rounded-2xl sm:px-10">
+        <div className="bg-[#0A120E] py-8 px-6 shadow-2xl border border-emerald-900/60 rounded-2xl sm:px-10">
           <form className="space-y-5" onSubmit={handleLogin}>
             <div>
-              <label className="block text-xs font-semibold text-slate-700">Work Email</label>
+              <label className="block text-xs font-semibold text-zinc-300">Work Email</label>
               <div className="mt-1 relative rounded-md shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/70">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -64,20 +64,20 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  className="block w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full pl-9 pr-3 py-2 text-sm bg-[#050806] border border-emerald-900/60 text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold text-slate-700">Password</label>
-                <a href="#" className="text-xs font-medium text-blue-600 hover:underline">
+                <label className="block text-xs font-semibold text-zinc-300">Password</label>
+                <a href="#" className="text-xs font-medium text-emerald-400 hover:underline">
                   Forgot password?
                 </a>
               </div>
               <div className="mt-1 relative rounded-md shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/70">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -85,7 +85,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="block w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full pl-9 pr-3 py-2 text-sm bg-[#050806] border border-emerald-900/60 text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -93,48 +93,48 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#101827] hover:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-colors"
+              className="w-full flex justify-center py-2.5 px-4 rounded-lg shadow-lg text-sm font-extrabold text-black bg-emerald-500 hover:bg-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer shadow-[0_0_16px_rgba(16,185,129,0.35)]"
             >
               {loading ? 'Authenticating...' : 'Sign In to Workspace'}
             </button>
           </form>
 
           {/* Quick Demo Persona Switcher */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 text-center">
-              Quick One-Click Demo Access
+          <div className="mt-6 pt-6 border-t border-emerald-950">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-emerald-400/70 mb-3 text-center">
+              Quick One-Click Persona Access
             </span>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickRole('admin')}
-                className="p-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-xs font-medium text-slate-800 transition-all text-center"
+                className="p-2.5 rounded-lg border border-emerald-900/50 bg-[#060B08] hover:bg-emerald-950/60 hover:border-emerald-500/40 text-xs font-medium transition-all text-center cursor-pointer"
               >
-                <div className="font-bold text-slate-900">Admin</div>
-                <div className="text-[10px] text-slate-500">Ruben R.</div>
+                <div className="font-extrabold text-white">Admin</div>
+                <div className="text-[10px] text-zinc-400">Ruben R.</div>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickRole('reviewer')}
-                className="p-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-xs font-medium text-slate-800 transition-all text-center"
+                className="p-2.5 rounded-lg border border-emerald-900/50 bg-[#060B08] hover:bg-emerald-950/60 hover:border-emerald-500/40 text-xs font-medium transition-all text-center cursor-pointer"
               >
-                <div className="font-bold text-slate-900">Reviewer</div>
-                <div className="text-[10px] text-slate-500">Sarah L.</div>
+                <div className="font-extrabold text-white">Reviewer</div>
+                <div className="text-[10px] text-zinc-400">Sarah L.</div>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickRole('creator')}
-                className="p-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-xs font-medium text-slate-800 transition-all text-center"
+                className="p-2.5 rounded-lg border border-emerald-900/50 bg-[#060B08] hover:bg-emerald-950/60 hover:border-emerald-500/40 text-xs font-medium transition-all text-center cursor-pointer"
               >
-                <div className="font-bold text-slate-900">Creator</div>
-                <div className="text-[10px] text-slate-500">Marcus V.</div>
+                <div className="font-extrabold text-white">Creator</div>
+                <div className="text-[10px] text-zinc-400">Marcus V.</div>
               </button>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+        <div className="mt-6 text-center text-xs text-zinc-400 flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-[#00FF87]" />
           <span>Secured with Supabase Auth & Row Level Security</span>
         </div>
       </div>

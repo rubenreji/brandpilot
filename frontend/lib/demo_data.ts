@@ -75,6 +75,19 @@ export const INITIAL_GUIDELINES: BrandGuideline[] = [
     extracted_text: "AuraCloud positions itself as an enterprise-grade cloud governance authority. All communications must convey architectural rigor, stability, and verifiable evidence. Avoid speculative hype and superficial promises. Never state absolute guarantees or unsupported market rankings.",
     uploaded_at: "2026-11-10T14:30:00Z",
     chunks_count: 4
+  },
+  {
+    id: "guide-002",
+    organization_id: "org-auracloud-001",
+    title: "AuraCloud Enterprise Architecture & Product Claims Manual v3.0",
+    description: "Technical specifications, SLA limits, prohibited security claims, and competitive comparison rules.",
+    category: "product_architecture",
+    version: "3.0",
+    status: "active",
+    file_name: "AuraCloud_Enterprise_Architecture_Brand_Knowledge_Base_v2.md",
+    extracted_text: "AuraCloud delivers multi-cloud infrastructure orchestration. All published metrics must adhere to verified benchmarks: financially backed 99.95% monthly uptime SLA, RPO under 15 seconds, and 48 Tier-1 edge PoPs. Absolute security claims such as 'unhackable' or 'bulletproof' are strictly prohibited.",
+    uploaded_at: "2026-11-18T18:00:00Z",
+    chunks_count: 6
   }
 ];
 
@@ -122,6 +135,39 @@ export const INITIAL_FACTS: ApprovedFact[] = [
     product_association: "AuraCloud Professional",
     approval_status: "approved",
     last_verified_date: "2026-11-14"
+  },
+  {
+    id: "fact-005",
+    organization_id: "org-auracloud-001",
+    title: "High-Availability Failover Limits",
+    category: "Reliability & Guarantees",
+    approved_statement: "AuraCloud guarantees Recovery Point Objective (RPO) under 15 seconds and Recovery Time Objective (RTO) under 60 seconds across paired multi-cloud regions.",
+    supporting_evidence: "Disaster Recovery Protocol v3.2 & Chaos Mesh Failover Audit 2026",
+    product_association: "AuraCloud Core",
+    approval_status: "approved",
+    last_verified_date: "2026-11-15"
+  },
+  {
+    id: "fact-006",
+    organization_id: "org-auracloud-001",
+    title: "Global Edge Infrastructure Footprint",
+    category: "Product Architecture",
+    approved_statement: "AuraCloud EdgeDirect operates 48 Tier-1 points of presence across North America, EMEA, and APAC delivering sub-10ms API routing.",
+    supporting_evidence: "Global Network Operations Infrastructure Topology Guide 2026",
+    product_association: "AuraCloud EdgeDirect",
+    approval_status: "approved",
+    last_verified_date: "2026-11-16"
+  },
+  {
+    id: "fact-007",
+    organization_id: "org-auracloud-001",
+    title: "Enterprise Cryptographic Standards",
+    category: "Security & Compliance",
+    approved_statement: "AuraCloud enforces FIPS 140-3 validated AES-256-GCM and ChaCha20-Poly1305 encryption with automated mTLS 1.3 service mesh isolation.",
+    supporting_evidence: "InfoSec Cryptographic Controls Specification Sec 8.2",
+    product_association: "AuraCloud Mesh & Vault",
+    approval_status: "approved",
+    last_verified_date: "2026-11-17"
   }
 ];
 
@@ -191,6 +237,72 @@ export const INITIAL_TERMINOLOGY: TerminologyRule[] = [
     whole_word: false,
     rule_description: "Mandatory disclaimer required on any marketing assets showcasing performance benchmarks.",
     contextual_exceptions: "Not required on short social media cards under 140 characters."
+  },
+  {
+    id: "term-007",
+    organization_id: "org-auracloud-001",
+    term: "unhackable",
+    rule_type: "prohibited",
+    preferred_alternative: "zero-trust architecture with defense-in-depth isolation",
+    case_sensitive: false,
+    whole_word: true,
+    rule_description: "Absolute security guarantees create severe product liability. Use defense-in-depth terminology.",
+    contextual_exceptions: "None."
+  },
+  {
+    id: "term-008",
+    organization_id: "org-auracloud-001",
+    term: "bulletproof",
+    rule_type: "prohibited",
+    preferred_alternative: "resilient enterprise infrastructure",
+    case_sensitive: false,
+    whole_word: true,
+    rule_description: "Informal, exaggerated security metaphor prohibited under Section 4.1.",
+    contextual_exceptions: "None."
+  },
+  {
+    id: "term-009",
+    organization_id: "org-auracloud-001",
+    term: "military-grade encryption",
+    rule_type: "prohibited",
+    preferred_alternative: "FIPS 140-3 validated AES-256-GCM encryption",
+    case_sensitive: false,
+    whole_word: true,
+    rule_description: "Vague marketing cliché. Always specify exact cryptographic ciphers and FIPS validation standards.",
+    contextual_exceptions: "None."
+  },
+  {
+    id: "term-010",
+    organization_id: "org-auracloud-001",
+    term: "zero latency",
+    rule_type: "prohibited",
+    preferred_alternative: "deterministic sub-5 millisecond median latency",
+    case_sensitive: false,
+    whole_word: true,
+    rule_description: "Zero latency claims violate physical networking bounds. Quote empirical p99 latency percentiles.",
+    contextual_exceptions: "None."
+  },
+  {
+    id: "term-011",
+    organization_id: "org-auracloud-001",
+    term: "infinite scale",
+    rule_type: "prohibited",
+    preferred_alternative: "elastic horizontal autoscaling supporting 1M+ concurrent RPS",
+    case_sensitive: false,
+    whole_word: true,
+    rule_description: "Unbounded scalability claims lack engineering veracity. Cite verified benchmark thresholds.",
+    contextual_exceptions: "None."
+  },
+  {
+    id: "term-012",
+    organization_id: "org-auracloud-001",
+    term: "cloud supremacy",
+    rule_type: "prohibited",
+    preferred_alternative: "cloud leadership and operational resilience",
+    case_sensitive: false,
+    whole_word: true,
+    rule_description: "Combative, aggressive language violates AuraCloud executive professional tone guidelines.",
+    contextual_exceptions: "None."
   }
 ];
 
@@ -261,162 +373,9 @@ export const INITIAL_ASSETS: BrandAsset[] = [
   }
 ];
 
-export const INITIAL_SUBMISSIONS: ContentSubmission[] = [
-  {
-    id: "sub-demo-flagged",
-    organization_id: "org-auracloud-001",
-    title: "Q4 Product Announcement — Press Release Draft",
-    content_type: "press_release",
-    target_platform: "Corporate Newsroom & PR Newswire",
-    associated_product: "AuraCloud Enterprise",
-    campaign_name: "Q4 Enterprise Scaling",
-    original_text: "We are thrilled to announce that AuraCloud is India's No. 1 AI cloud company. Our revolutionary AI magic guarantees 100% accuracy and is the cheapest solution available on the market today. Join thousands of developers who trust auracloud without hesitation.",
-    current_text: "We are thrilled to announce that AuraCloud is India's No. 1 AI cloud company. Our revolutionary AI magic guarantees 100% accuracy and is the cheapest solution available on the market today. Join thousands of developers who trust auracloud without hesitation.",
-    status: "audited",
-    word_count: 35,
-    character_count: 248,
-    compliance_score: 34,
-    creator_id: "user-creator-1",
-    creator_name: "Marcus Vance",
-    created_at: "2026-11-14T10:15:00Z",
-    updated_at: "2026-11-14T10:15:00Z",
-    findings_count: 5,
-    critical_count: 2
-  },
-  {
-    id: "sub-demo-approved",
-    organization_id: "org-auracloud-001",
-    title: "Multi-Cloud Enterprise Security Architecture Brief",
-    content_type: "marketing_copy",
-    target_platform: "Corporate Blog & LinkedIn",
-    associated_product: "AuraCloud Enterprise",
-    campaign_name: "Infrastructure Security Series",
-    original_text: "AuraCloud provides unified multi-cloud governance across AWS, Google Cloud Platform, and Microsoft Azure. Backed by our 99.95% monthly uptime SLA, AuraCloud enables engineering teams to deploy compliant infrastructure securely and with high reliability.",
-    current_text: "AuraCloud provides unified multi-cloud governance across AWS, Google Cloud Platform, and Microsoft Azure. Backed by our 99.95% monthly uptime SLA, AuraCloud enables engineering teams to deploy compliant infrastructure securely and with high reliability.",
-    status: "approved",
-    word_count: 32,
-    character_count: 264,
-    compliance_score: 100,
-    creator_id: "user-creator-1",
-    creator_name: "Marcus Vance",
-    created_at: "2026-11-12T16:20:00Z",
-    updated_at: "2026-11-13T09:45:00Z",
-    findings_count: 0,
-    critical_count: 0
-  }
-];
+export const INITIAL_SUBMISSIONS: ContentSubmission[] = [];
 
-export const INITIAL_FINDINGS: Record<string, ComplianceFinding[]> = {
-  "sub-demo-flagged": [
-    {
-      id: "find-001",
-      submission_id: "sub-demo-flagged",
-      category: "unsupported_claim",
-      severity: "high",
-      original_text: "India's No. 1",
-      start_index: 45,
-      end_index: 58,
-      explanation: "Unsupported market leadership ranking. Market position claims must cite dated third-party analyst recognition (e.g. Gartner, IDC).",
-      relevant_brand_rule: "Factual Claims Policy 4.2: Prohibited Market Superlatives",
-      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
-      page_reference: "Page 22, Section 4.2",
-      exact_supporting_passage: "Section 4.2: Factual Claims Policy: Unsubstantiated market leadership claims ('No. 1', 'cheapest') expose the company to regulatory censure and are prohibited.",
-      suggested_correction: "a leading enterprise cloud platform",
-      confidence: 0.98,
-      status: "pending"
-    },
-    {
-      id: "find-002",
-      submission_id: "sub-demo-flagged",
-      category: "terminology",
-      severity: "high",
-      original_text: "AI magic",
-      start_index: 93,
-      end_index: 101,
-      explanation: "The phrase 'AI magic' is explicitly prohibited. It trivializes enterprise software engineering and violates brand voice standards.",
-      relevant_brand_rule: "Terminology Policy: Prohibited Term 'AI magic'",
-      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
-      page_reference: "Page 15, Section 3.4",
-      exact_supporting_passage: "Section 3.4: Nomenclature Rules: Never refer to our capabilities as 'AI magic'. Use 'automated cloud orchestration' or 'predictive optimization'.",
-      suggested_correction: "intelligent automated orchestration",
-      confidence: 1.0,
-      status: "pending"
-    },
-    {
-      id: "find-003",
-      submission_id: "sub-demo-flagged",
-      category: "unsupported_claim",
-      severity: "critical",
-      original_text: "guarantees 100% accuracy",
-      start_index: 102,
-      end_index: 126,
-      explanation: "Absolute performance guarantee. Legally prohibited under our compliance guidelines without qualified warranty limits and SLA bounds.",
-      relevant_brand_rule: "Legal Compliance Standard: Prohibited Absolute Guarantees",
-      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
-      page_reference: "Page 22, Section 4.2",
-      exact_supporting_passage: "Section 4.2: Never state absolute guarantees, unsupported rankings, or exaggerated superlatives. All product descriptions must reflect verifiable specifications.",
-      suggested_correction: "delivers high-reliability automated verification",
-      confidence: 0.99,
-      status: "pending"
-    },
-    {
-      id: "find-004",
-      submission_id: "sub-demo-flagged",
-      category: "unsupported_claim",
-      severity: "critical",
-      original_text: "cheapest solution available",
-      start_index: 138,
-      end_index: 165,
-      explanation: "Unsubstantiated comparative pricing claim. Price superlatives require a defined competitor benchmark and active pricing audit.",
-      relevant_brand_rule: "Factual Claims Policy 4.2: Comparative Pricing",
-      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
-      page_reference: "Page 22, Section 4.2",
-      exact_supporting_passage: "Section 4.2: Comparative pricing claims ('cheapest') without published competitive benchmarking invite regulatory scrutiny.",
-      suggested_correction: "cost-effective enterprise solution",
-      confidence: 0.97,
-      status: "pending"
-    },
-    {
-      id: "find-005",
-      submission_id: "sub-demo-flagged",
-      category: "terminology",
-      severity: "medium",
-      original_text: "auracloud",
-      start_index: 226,
-      end_index: 235,
-      explanation: "Incorrect brand capitalization. AuraCloud must always be capitalized with capital 'A' and capital 'C'.",
-      relevant_brand_rule: "Brand Nomenclature Policy 3.4: Capitalization Standard",
-      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
-      page_reference: "Page 15, Section 3.4",
-      exact_supporting_passage: "Section 3.4: Nomenclature Rules: AuraCloud must always appear in camel-case. Derivatives such as 'auracloud' are prohibited.",
-      suggested_correction: "AuraCloud",
-      confidence: 1.0,
-      status: "pending"
-    }
-  ]
-};
+export const INITIAL_FINDINGS: Record<string, ComplianceFinding[]> = {};
 
-export const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: "notif-1",
-    organization_id: "org-auracloud-001",
-    user_id: "user-creator-1",
-    title: "Audit Completed",
-    message: "Q4 Product Announcement draft has been audited. 5 compliance findings identified.",
-    notification_type: "audit_completed",
-    link: "/app/corrections/sub-demo-flagged",
-    is_read: false,
-    created_at: "2026-11-14T10:16:00Z"
-  },
-  {
-    id: "notif-2",
-    organization_id: "org-auracloud-001",
-    user_id: "user-creator-1",
-    title: "Content Approved",
-    message: "Multi-Cloud Enterprise Security Architecture Brief was approved by Sarah Lin.",
-    notification_type: "approved",
-    link: "/app/approvals",
-    is_read: true,
-    created_at: "2026-11-13T09:45:00Z"
-  }
-];
+export const INITIAL_NOTIFICATIONS: Notification[] = [];
+

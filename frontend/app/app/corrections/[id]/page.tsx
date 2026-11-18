@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useBrandPilot } from '@/lib/store';
 import {
@@ -23,7 +24,10 @@ import {
   FileCode,
   FileText,
   Award,
-  CheckCheck
+  CheckCheck,
+  FilePlus,
+  Zap,
+  RotateCcw
 } from 'lucide-react';
 
 export default function CorrectionStudioPage() {
@@ -32,6 +36,7 @@ export default function CorrectionStudioPage() {
   const submissionId = params.id as string;
 
   const {
+    submissions,
     getSubmission,
     getSubmissionFindings,
     applySuggestion,
@@ -39,11 +44,14 @@ export default function CorrectionStudioPage() {
     rejectFinding,
     updateDraftText,
     submitForApproval,
+    analyzeTextRealtime,
+    createLiveSubmission,
+    showToast,
     currentUser
   } = useBrandPilot();
 
-  const submission = getSubmission(submissionId) || getSubmission('sub-demo-flagged');
-  const findings = getSubmissionFindings(submission ? submission.id : 'sub-demo-flagged');
+  const submission = (submissionId && submissionId !== 'live' ? getSubmission(submissionId) : null) || (submissions && submissions[0]) || null;
+  const findings = getSubmissionFindings(submission ? submission.id : '');
 
   const [activeFindingId, setActiveFindingId] = useState<string | null>(null);
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
@@ -54,6 +62,32 @@ export default function CorrectionStudioPage() {
   const [submissionNote, setSubmissionNote] = useState('');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [copiedExportFormat, setCopiedExportFormat] = useState<string | null>(null);
+  const [isNewDraftModalOpen, setIsNewDraftModalOpen] = useState(false);
+  const [newDraftTitle, setNewDraftTitle] = useState('');
+  const [newDraftContent, setNewDraftContent] = useState('');
+
+  const handleCreateCustomDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDraftContent.trim()) {
+      showToast('Please enter content to analyze.', 'error');
+      return;
+    }
+    const title = newDraftTitle.trim() || 'Custom Draft Content';
+    const newId = createLiveSubmission(title, newDraftContent);
+    setIsNewDraftModalOpen(false);
+    setNewDraftTitle('');
+    setNewDraftContent('');
+    setManualText(newDraftContent);
+    showToast('Live content loaded! Real-time AI analysis active.', 'success');
+    router.push(`/app/corrections/${newId}`);
+  };
+
+  const handleLiveTextChange = (text: string) => {
+    setManualText(text);
+    if (submission) {
+      updateDraftText(submission.id, text);
+    }
+  };
 
   const handleApply = async (findingId: string) => {
     if (!submission) return;
@@ -219,6 +253,7 @@ ${submission.current_text}
 
   // Render text with highlight spans (supporting case-insensitivity & overlap protection)
   const renderAnnotatedText = () => {
+    if (!submission) return null;
     const text = submission.current_text;
     const lowerText = text.toLowerCase();
     const activeMatches: {
@@ -280,10 +315,10 @@ ${submission.current_text}
 
       const badgeColor =
         severity === 'critical'
-          ? 'bg-rose-100 text-rose-800 border-rose-300 ring-rose-400 hover:bg-rose-200'
+          ? 'bg-rose-950/80 text-rose-300 border-rose-600/70 ring-rose-400 hover:bg-rose-900/90'
           : severity === 'high'
-          ? 'bg-amber-100 text-amber-800 border-amber-300 ring-amber-400 hover:bg-amber-200'
-          : 'bg-blue-100 text-blue-800 border-blue-300 ring-blue-400 hover:bg-blue-200';
+          ? 'bg-amber-950/80 text-amber-300 border-amber-600/70 ring-amber-400 hover:bg-amber-900/90'
+          : 'bg-emerald-950/80 text-emerald-300 border-emerald-600/70 ring-emerald-400 hover:bg-emerald-900/90';
 
       elements.push(
         <mark
@@ -308,29 +343,59 @@ ${submission.current_text}
     return <div className="whitespace-pre-wrap leading-relaxed">{elements}</div>;
   };
 
+  if (!submission) {
+    return (
+      <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6 text-zinc-100">
+        <div className="bg-[#0A120E] rounded-2xl p-8 border border-emerald-900/60 shadow-lg text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            <Edit3 className="w-6 h-6" />
+          </div>
+          <h1 className="text-xl font-black text-white">Correction Studio Ready</h1>
+          <p className="text-xs text-zinc-400 max-w-md mx-auto">
+            All trackers are reset to zero. Start tracking by entering new text or auditing candidate content.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Link
+              href="/app/corrections"
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl shadow-[0_0_16px_rgba(16,185,129,0.35)] transition-all cursor-pointer"
+            >
+              Enter Text to Analyze →
+            </Link>
+            <Link
+              href="/app/audit"
+              className="px-5 py-2.5 bg-[#060B08] hover:bg-emerald-950/60 border border-emerald-900/60 text-zinc-200 text-xs font-bold rounded-xl transition-all"
+            >
+              Upload Document →
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in text-zinc-100 selection:bg-emerald-500 selection:text-black">
       {/* Studio Header Bar */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 card-hover-effect">
+      <div className="bg-[#0A120E] rounded-2xl p-5 border border-emerald-900/60 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 card-hover-effect">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
               {submission.content_type.replace('_', ' ')}
             </span>
             <span
               className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${
                 submission.status === 'approved'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  ? 'bg-emerald-950 text-[#00FF87] border-emerald-700'
                   : submission.status === 'in_review' || submission.status === 'pending_review'
-                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                  ? 'bg-amber-950 text-amber-300 border-amber-800'
+                  : 'bg-rose-950 text-rose-300 border-rose-800'
               }`}
             >
               Status: {submission.status.replace('_', ' ')}
             </span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">{submission.title}</h1>
-          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+          <h1 className="text-xl font-extrabold text-white">{submission.title}</h1>
+          <div className="flex items-center gap-3 text-xs text-zinc-400 mt-1">
             <span>Author: {submission.creator_name}</span>
             <span>•</span>
             <span>{submission.word_count} words</span>
@@ -345,22 +410,22 @@ ${submission.current_text}
             <button
               type="button"
               onClick={() => applyAllSuggestions(submission.id)}
-              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-xl shadow-lg flex items-center gap-1.5 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_18px_rgba(16,185,129,0.35)] cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+              <Sparkles className="w-3.5 h-3.5 text-black" />
               <span>Accept All Fixes ({pendingFindings.length})</span>
             </button>
           )}
 
-          <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-center transition-all">
-            <div className="text-xs text-slate-500 font-medium">Compliance Score</div>
+          <div className="bg-[#060B08] px-4 py-2 rounded-xl border border-emerald-950 text-center transition-all">
+            <div className="text-xs text-zinc-400 font-medium">Compliance Score</div>
             <div
               className={`text-2xl font-black transition-all ${
                 (submission.compliance_score ?? 0) >= 90
-                  ? 'text-emerald-600'
+                  ? 'text-[#00FF87]'
                   : (submission.compliance_score ?? 0) >= 70
-                  ? 'text-amber-600'
-                  : 'text-rose-600'
+                  ? 'text-amber-400'
+                  : 'text-rose-400'
               }`}
             >
               {submission.compliance_score ?? 0}%
@@ -369,48 +434,58 @@ ${submission.current_text}
 
           <button
             type="button"
+            onClick={() => setIsNewDraftModalOpen(true)}
+            className="px-3.5 py-2.5 bg-[#060B08] border border-emerald-900/60 hover:bg-emerald-950/60 text-emerald-400 text-xs font-semibold rounded-xl shadow-xs transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            title="Type or paste any custom text to analyze live"
+          >
+            <FilePlus className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Analyze Custom Text</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsExportModalOpen(true)}
-            className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-xl shadow-xs transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2.5 bg-[#060B08] border border-emerald-900/60 hover:bg-emerald-950/60 text-zinc-200 text-xs font-semibold rounded-xl shadow-xs transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
             title="Export verified content or compliance audit report"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
+            <Download className="w-3.5 h-3.5 text-zinc-400" />
             <span>Export</span>
           </button>
 
           <button
             onClick={() => setIsSubmitModalOpen(true)}
-            className="px-5 py-2.5 bg-[#101827] hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-sm transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer shadow-[0_0_18px_rgba(16,185,129,0.35)]"
           >
             <span>Submit for Human Approval</span>
-            <ArrowRight className="w-4 h-4 text-blue-400" />
+            <ArrowRight className="w-4 h-4 text-black" />
           </button>
         </div>
       </div>
 
       {/* 100% Compliance Celebration Banner */}
       {((submission.compliance_score ?? 0) === 100 || pendingFindings.length === 0) && (
-        <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-scale-in">
+        <div className="bg-gradient-to-r from-emerald-950 via-[#0A1A12] to-emerald-950 text-white rounded-2xl p-4 sm:p-5 border border-emerald-500/40 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-scale-in">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
-              <Award className="w-6 h-6 text-white animate-float" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+              <Award className="w-6 h-6 text-[#00FF87] animate-float" />
             </div>
             <div>
               <div className="font-extrabold text-sm sm:text-base flex items-center gap-2">
                 <span>100% Brand Compliance Achieved!</span>
-                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-mono font-normal">
+                <span className="text-xs bg-emerald-900/60 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded-full font-mono font-normal">
                   All Citations Verified
                 </span>
               </div>
-              <p className="text-xs text-emerald-100 mt-0.5">
+              <p className="text-xs text-zinc-300 mt-0.5">
                 Every guideline discrepancy has been corrected. This asset is ready for formal human publication sign-off.
               </p>
             </div>
           </div>
           <button
             onClick={() => setIsSubmitModalOpen(true)}
-            className="px-4 py-2 bg-white text-emerald-900 hover:bg-emerald-50 rounded-xl text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer transform hover:scale-105 active:scale-95"
+            className="px-4 py-2 bg-emerald-500 text-black hover:bg-emerald-400 rounded-xl text-xs font-extrabold transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer transform hover:scale-105 active:scale-95 shadow-[0_0_14px_rgba(16,185,129,0.4)]"
           >
-            <Send className="w-3.5 h-3.5 text-emerald-600" />
+            <Send className="w-3.5 h-3.5 text-black" />
             <span>Submit for Sign-off Now</span>
           </button>
         </div>
@@ -419,17 +494,17 @@ ${submission.current_text}
       {/* Main 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (7 cols): Draft Review Text Area */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-2 flex-wrap">
+        <div className="lg:col-span-7 bg-[#0A120E] rounded-2xl border border-emerald-900/60 p-6 shadow-lg space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-emerald-950 gap-2 flex-wrap">
             {/* View Mode Tabs */}
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center gap-1.5 bg-[#050806] p-1 rounded-xl border border-emerald-950">
               <button
                 type="button"
                 onClick={() => setViewMode('annotated')}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                   viewMode === 'annotated'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-emerald-500 text-black font-extrabold shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 Annotated Review
@@ -442,11 +517,11 @@ ${submission.current_text}
                 }}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
                   viewMode === 'editor'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-emerald-500 text-black font-extrabold shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                <Edit3 className={`w-3.5 h-3.5 ${viewMode === 'editor' ? 'text-black' : 'text-emerald-400'}`} />
                 <span>Live Editor</span>
               </button>
               <button
@@ -454,8 +529,8 @@ ${submission.current_text}
                 onClick={() => setViewMode('diff')}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                   viewMode === 'diff'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-emerald-500 text-black font-extrabold shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 Changes Diff
@@ -465,60 +540,65 @@ ${submission.current_text}
             {viewMode === 'editor' && (
               <button
                 type="button"
-                onClick={handleSaveManualEdit}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-xs transition-all"
+                onClick={() => setViewMode('annotated')}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
               >
-                <Check className="w-3.5 h-3.5" />
-                <span>Save & Apply Changes</span>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Done Editing (View Highlights)</span>
               </button>
             )}
           </div>
 
           {viewMode === 'editor' ? (
             <div className="space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-                <span>Direct Document Editor (Edits reflect live across audit findings)</span>
-                <span>{manualText.trim() ? manualText.trim().split(/\s+/).filter(Boolean).length : 0} words • {manualText.length} chars</span>
+              <div className="flex items-center justify-between text-xs font-medium px-1">
+                <span className="flex items-center gap-2 text-emerald-400 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-pulse shadow-[0_0_6px_#00FF87]"></span>
+                  Real-time AI Analysis Active
+                </span>
+                <span className="text-zinc-500 font-mono">
+                  {manualText.trim() ? manualText.trim().split(/\s+/).filter(Boolean).length : 0} words • {manualText.length} chars
+                </span>
               </div>
               <textarea
                 rows={16}
                 value={manualText}
-                onChange={e => setManualText(e.target.value)}
-                placeholder="Type or edit your draft text here..."
-                className="w-full text-sm font-sans leading-relaxed p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+                onChange={e => handleLiveTextChange(e.target.value)}
+                placeholder="Type or paste any marketing copy, ad text, press release, or document here to test real-time AI compliance analysis..."
+                className="w-full text-sm font-sans leading-relaxed p-4 border border-emerald-900/60 rounded-xl focus:ring-2 focus:ring-emerald-500 text-white bg-[#050806] shadow-inner font-mono sm:font-sans"
               />
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                <span>Tip: Click &quot;Save & Apply Changes&quot; above to re-index all findings against active brand rules.</span>
+              <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-1">
+                <span>Findings and compliance score automatically recalculate on every keystroke.</span>
                 <button
                   type="button"
-                  onClick={() => setManualText(submission.original_text)}
-                  className="text-slate-400 hover:text-slate-700 underline"
+                  onClick={() => handleLiveTextChange(submission.original_text)}
+                  className="text-emerald-400 hover:text-emerald-300 underline cursor-pointer flex items-center gap-1"
                 >
-                  Reset to Original Text
+                  <RotateCcw className="w-3 h-3" /> Reset to Original Text
                 </button>
               </div>
             </div>
           ) : viewMode === 'diff' ? (
             <div className="space-y-4 animate-fade-in">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-rose-50/50 border border-rose-200 rounded-xl space-y-2">
-                  <div className="text-xs font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
+                <div className="p-4 bg-rose-950/30 border border-rose-900/60 rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center justify-between">
                     <span>Original Uploaded Draft</span>
                     <span className="text-[10px] font-normal lowercase">initial audit</span>
                   </div>
-                  <div className="text-xs text-slate-800 font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
+                  <div className="text-xs text-zinc-300 font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
                     {submission.original_text}
                   </div>
                 </div>
 
-                <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-2">
-                  <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                <div className="p-4 bg-emerald-950/30 border border-emerald-900/60 rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
                     <span>Current Compliant Version</span>
-                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full">
                       {submission.compliance_score}% score
                     </span>
                   </div>
-                  <div className="text-xs text-slate-900 font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
+                  <div className="text-xs text-white font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
                     {submission.current_text}
                   </div>
                 </div>
@@ -526,44 +606,44 @@ ${submission.current_text}
             </div>
           ) : (
             <div className="space-y-3 animate-fade-in">
-              <div className="text-sm font-sans leading-relaxed text-slate-800 p-2 min-h-[300px]">
+              <div className="text-sm font-sans leading-relaxed text-zinc-200 p-2 min-h-[300px]">
                 {renderAnnotatedText()}
               </div>
 
               {/* Hint legend */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <div className="pt-3 border-t border-emerald-950 flex items-center justify-between text-[11px] text-zinc-400">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded bg-rose-200 border border-rose-400"></span> Critical
+                    <span className="w-2.5 h-2.5 rounded bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.6)]"></span> Critical
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded bg-amber-200 border border-amber-400"></span> High
+                    <span className="w-2.5 h-2.5 rounded bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.6)]"></span> High
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded bg-blue-200 border border-blue-400"></span> Medium
+                    <span className="w-2.5 h-2.5 rounded bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.6)]"></span> Medium
                   </span>
                 </div>
-                <span className="text-slate-400">Click any highlight to jump to citation card</span>
+                <span className="text-zinc-500">Click any highlight to jump to citation card</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Right Column (5 cols): Explainable Findings Cards */}
-        <div className="lg:col-span-5 space-y-4">
+        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto pr-1">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-400/80">
               Source-Backed Findings ({findings.length})
             </h2>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              <span className="text-xs font-semibold text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800">
                 {acceptedFindings.length} resolved
               </span>
               {pendingFindings.length > 0 && (
                 <button
                   type="button"
                   onClick={() => applyAllSuggestions(submission.id)}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline"
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold hover:underline"
                 >
                   Accept all fixes
                 </button>
@@ -571,212 +651,309 @@ ${submission.current_text}
             </div>
           </div>
 
-          {findings.map((finding, idx) => {
-            const isSelected = activeFindingId === finding.id;
-            const isResolved = finding.status === 'accepted';
-            const isRejected = finding.status === 'rejected';
-
-            return (
-              <div
-                key={finding.id}
-                id={`card-${finding.id}`}
-                onClick={() => setActiveFindingId(finding.id)}
-                className={`bg-white rounded-2xl p-5 border transition-all duration-200 shadow-xs card-hover-effect ${
-                  isSelected
-                    ? 'border-blue-500 ring-2 ring-blue-500/20'
-                    : isResolved
-                    ? 'border-emerald-200 bg-emerald-50/20 opacity-80'
-                    : isRejected
-                    ? 'border-slate-200 bg-slate-50 opacity-60'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                {/* Card Header: Severity & Category */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
-                        finding.severity === 'critical'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : finding.severity === 'high'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}
-                    >
-                      {finding.severity}
-                    </span>
-                    <span className="text-xs text-slate-500 capitalize">
-                      {finding.category.replace('_', ' ')}
-                    </span>
-                  </div>
-
-                  <span className="text-[10px] font-mono text-slate-400">
-                    Issue #{idx + 1}
-                  </span>
-                </div>
-
-                {/* Flagged phrase */}
-                <div className="text-xs text-slate-700 mb-2">
-                  <span className="text-slate-400 font-medium">Flagged text: </span>
-                  <span className="font-semibold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
-                    &quot;{finding.original_text}&quot;
-                  </span>
-                </div>
-
-                {/* Explanation */}
-                <p className="text-xs text-slate-700 leading-relaxed mb-3">
-                  {finding.explanation}
-                </p>
-
-                {/* Official Brand Citation Box */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-700 space-y-1.5 mb-3">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-900 text-[11px]">
-                    <BookOpen className="w-3.5 h-3.5 text-[#3978E8]" />
-                    <span>{finding.relevant_brand_rule}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    {finding.source_document} ({finding.page_reference})
-                  </div>
-                  <p className="italic text-slate-600 text-[11px] pt-1 border-t border-slate-200/60 leading-normal">
-                    &quot;{finding.exact_supporting_passage}&quot;
-                  </p>
-                </div>
-
-                {/* Suggested Replacement & Actions */}
-                {finding.status === 'pending' ? (
-                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
-                    {editingFindingId === finding.id ? (
-                      <div className="space-y-2 p-2.5 bg-blue-50/50 rounded-lg border border-blue-200">
-                        <label className="text-[11px] font-semibold text-slate-700 block">Custom Replacement</label>
-                        <input
-                          type="text"
-                          value={customReplacement}
-                          onChange={e => setCustomReplacement(e.target.value)}
-                          className="w-full text-xs p-1.5 border border-slate-300 rounded bg-white"
-                        />
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setEditingFindingId(null)}
-                            className="px-2 py-0.5 text-xs text-slate-500 hover:text-slate-700"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              applySuggestion(submission.id, finding.id, customReplacement);
-                              setEditingFindingId(null);
-                            }}
-                            className="px-2.5 py-1 bg-blue-600 text-white text-xs font-semibold rounded"
-                          >
-                            Apply Custom
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-xs flex items-center justify-between">
-                          <span className="text-slate-500 font-medium">Approved replacement:</span>
-                          <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            {finding.suggested_correction}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-end gap-2 mt-1">
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation();
-                              setCustomReplacement(finding.suggested_correction);
-                              setEditingFindingId(finding.id);
-                            }}
-                            className="px-2 py-1 text-slate-600 hover:text-slate-900 text-xs font-medium rounded hover:bg-slate-100 flex items-center gap-1"
-                            title="Provide your own replacement phrasing"
-                          >
-                            <Edit3 className="w-3 h-3 text-slate-500" />
-                            <span>Custom</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleReject(finding.id);
-                            }}
-                            className="px-2.5 py-1 text-slate-500 hover:text-slate-800 text-xs font-medium rounded hover:bg-slate-100"
-                          >
-                            Dismiss
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleApply(finding.id);
-                            }}
-                            className="px-3.5 py-1.5 bg-[#3978E8] hover:bg-blue-600 text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Accept Suggestion</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Correction Applied
-                    </span>
-                    <span className="text-slate-400 font-mono text-[11px]">Score +12%</span>
-                  </div>
-                )}
+          {findings.length === 0 ? (
+            <div className="bg-[#0A120E] border border-emerald-900/60 rounded-2xl p-6 text-center space-y-3 animate-fade-in shadow-md">
+              <div className="w-12 h-12 bg-emerald-950 text-[#00FF87] border border-emerald-800 rounded-full flex items-center justify-center mx-auto shadow-[0_0_12px_rgba(0,255,135,0.2)]">
+                <CheckCircle2 className="w-6 h-6" />
               </div>
-            );
-          })}
+              <div className="font-extrabold text-white text-sm">Zero Compliance Violations</div>
+              <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                All phrasing in this draft fully aligns with your active brand terminology, tone rules, and verified guidelines.
+              </p>
+            </div>
+          ) : (
+            findings.map((finding, idx) => {
+              const isSelected = activeFindingId === finding.id;
+              const isResolved = finding.status === 'accepted';
+              const isRejected = finding.status === 'rejected';
+
+              return (
+                <div
+                  key={finding.id}
+                  id={`card-${finding.id}`}
+                  onClick={() => setActiveFindingId(finding.id)}
+                  className={`bg-[#0A120E] rounded-2xl p-5 border transition-all duration-200 shadow-md card-hover-effect ${
+                    isSelected
+                      ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                      : isResolved
+                      ? 'border-emerald-900/60 bg-emerald-950/20 opacity-80'
+                      : isRejected
+                      ? 'border-zinc-800 bg-zinc-950/40 opacity-60'
+                      : 'border-emerald-900/50 hover:border-emerald-500/40'
+                  }`}
+                >
+                  {/* Card Header: Severity & Category */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+                          finding.severity === 'critical'
+                            ? 'bg-rose-950 text-rose-300 border-rose-800'
+                            : finding.severity === 'high'
+                            ? 'bg-amber-950 text-amber-300 border-amber-800'
+                            : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                        }`}
+                      >
+                        {finding.severity}
+                      </span>
+                      <span className="text-xs text-zinc-400 capitalize">
+                        {finding.category.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Issue #{idx + 1}
+                    </span>
+                  </div>
+
+                  {/* Flagged phrase */}
+                  <div className="text-xs text-zinc-300 mb-2">
+                    <span className="text-zinc-500 font-medium">Flagged text: </span>
+                    <span className="font-semibold text-white bg-[#050806] border border-emerald-950 px-1.5 py-0.5 rounded">
+                      &quot;{finding.original_text}&quot;
+                    </span>
+                  </div>
+
+                  {/* Explanation */}
+                  <p className="text-xs text-zinc-300 leading-relaxed mb-3">
+                    {finding.explanation}
+                  </p>
+
+                  {/* Official Brand Citation Box */}
+                  <div className="p-3 rounded-xl bg-[#060B08] border border-emerald-950 text-xs text-zinc-300 space-y-1.5 mb-3">
+                    <div className="flex items-center gap-1.5 font-bold text-white text-[11px]">
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{finding.relevant_brand_rule}</span>
+                    </div>
+                    <div className="text-[10px] text-zinc-400 font-mono">
+                      {finding.source_document} ({finding.page_reference})
+                    </div>
+                    <p className="italic text-zinc-400 text-[11px] pt-1 border-t border-emerald-950 leading-normal">
+                      &quot;{finding.exact_supporting_passage}&quot;
+                    </p>
+                  </div>
+
+                  {/* Suggested Replacement & Actions */}
+                  {finding.status === 'pending' ? (
+                    <div className="pt-2 border-t border-emerald-950 flex flex-col gap-2">
+                      {editingFindingId === finding.id ? (
+                        <div className="space-y-2 p-2.5 bg-emerald-950/30 rounded-lg border border-emerald-800/60">
+                          <label className="text-[11px] font-semibold text-zinc-300 block">Custom Replacement</label>
+                          <input
+                            type="text"
+                            value={customReplacement}
+                            onChange={e => setCustomReplacement(e.target.value)}
+                            className="w-full text-xs p-1.5 border border-emerald-900/60 rounded bg-[#050806] text-white"
+                          />
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setEditingFindingId(null)}
+                              className="px-2 py-0.5 text-xs text-zinc-400 hover:text-white"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                applySuggestion(submission.id, finding.id, customReplacement);
+                                setEditingFindingId(null);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-500 text-black text-xs font-extrabold rounded"
+                            >
+                              Apply Custom
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-xs flex items-center justify-between">
+                            <span className="text-zinc-400 font-medium">Approved replacement:</span>
+                            <span className="font-extrabold text-[#00FF87] bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                              {finding.suggested_correction}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 mt-1">
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.stopPropagation();
+                                setCustomReplacement(finding.suggested_correction);
+                                setEditingFindingId(finding.id);
+                              }}
+                              className="px-2 py-1 text-zinc-400 hover:text-white text-xs font-medium rounded hover:bg-emerald-950/40 flex items-center gap-1 cursor-pointer"
+                              title="Provide your own replacement phrasing"
+                            >
+                              <Edit3 className="w-3 h-3 text-emerald-400" />
+                              <span>Custom</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleReject(finding.id);
+                              }}
+                              className="px-2.5 py-1 text-zinc-500 hover:text-zinc-200 text-xs font-medium rounded hover:bg-emerald-950/40 cursor-pointer"
+                            >
+                              Dismiss
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleApply(finding.id);
+                              }}
+                              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-lg shadow-sm flex items-center gap-1 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Accept Suggestion</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-emerald-950 flex items-center justify-between text-xs">
+                      <span className="text-[#00FF87] font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Correction Applied
+                      </span>
+                      <span className="text-emerald-400 font-mono text-[11px]">Score +12%</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
+      {/* Custom Live Draft Input Modal */}
+      {isNewDraftModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0A120E] rounded-2xl max-w-xl w-full shadow-2xl border border-emerald-900/80 max-h-[85vh] my-auto flex flex-col overflow-hidden animate-scale-in text-zinc-100">
+            <div className="shrink-0 p-5 border-b border-emerald-950 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FilePlus className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-extrabold text-white">Analyze Custom Text Live</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewDraftModalOpen(false)}
+                className="text-xs text-zinc-400 hover:text-white cursor-pointer p-1"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCustomDraft} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto p-5 space-y-4">
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Type or paste any custom document, ad copy, press release, or email draft. The AI engine will scan it instantly against your active knowledge base guidelines and pinpoint any terminology or voice violations.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    Document Title (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Q3 Cloud Campaign Launch"
+                    value={newDraftTitle}
+                    onChange={e => setNewDraftTitle(e.target.value)}
+                    className="w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg focus:ring-2 focus:ring-emerald-500 text-white bg-[#050806]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    Draft Content <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={7}
+                    required
+                    placeholder="Type or paste any marketing copy here (e.g. We are India's No. 1 platform with 100% accuracy and unhackable security)..."
+                    value={newDraftContent}
+                    onChange={e => setNewDraftContent(e.target.value)}
+                    className="w-full text-xs p-3 border border-emerald-900/60 rounded-lg focus:ring-2 focus:ring-emerald-500 text-white bg-[#050806] font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="shrink-0 p-4 border-t border-emerald-950 bg-[#060B08] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewDraftModalOpen(false)}
+                  className="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-lg shadow-md flex items-center gap-1.5 cursor-pointer shadow-[0_0_14px_rgba(16,185,129,0.35)]"
+                >
+                  <Zap className="w-3.5 h-3.5 text-black" />
+                  <span>Analyze Text Now</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Human Approval Request Modal */}
       {isSubmitModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-blue-600" />
-              <h3 className="text-base font-bold text-slate-900">Submit for Human Review</h3>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              This draft will be sent to designated brand reviewer <strong>Sarah Lin</strong>. Final approval requires explicit human sign-off.
-            </p>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Optional Note for Reviewer
-              </label>
-              <textarea
-                rows={3}
-                placeholder="e.g. Addressed all superlative claims and aligned with Section 4.2 guidelines."
-                value={submissionNote}
-                onChange={e => setSubmissionNote(e.target.value)}
-                className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0A120E] rounded-2xl max-w-md w-full shadow-2xl border border-emerald-900/80 max-h-[85vh] my-auto flex flex-col overflow-hidden animate-scale-in text-zinc-100">
+            <div className="shrink-0 p-5 border-b border-emerald-950 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-extrabold text-white">Submit for Human Review</h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsSubmitModalOpen(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium"
+                className="text-xs text-zinc-400 hover:text-white cursor-pointer p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-5 space-y-4">
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                This draft will be sent to designated brand reviewer <strong>Sarah Lin</strong>. Final approval requires explicit human sign-off.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  Optional Note for Reviewer
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Addressed all superlative claims and aligned with Section 4.2 guidelines."
+                  value={submissionNote}
+                  onChange={e => setSubmissionNote(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg focus:ring-2 focus:ring-emerald-500 text-white bg-[#050806]"
+                />
+              </div>
+            </div>
+
+            <div className="shrink-0 p-4 border-t border-emerald-950 bg-[#060B08] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSubmitModalOpen(false)}
+                className="px-3.5 py-2 text-xs text-zinc-400 hover:text-white font-medium cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSubmitForReview}
-                className="px-4 py-2 bg-[#101827] text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 bg-emerald-500 text-black text-xs font-extrabold rounded-lg hover:bg-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer shadow-[0_0_14px_rgba(16,185,129,0.35)]"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-3.5 h-3.5 text-black" />
                 <span>Request Sign-off</span>
               </button>
             </div>
@@ -786,96 +963,98 @@ ${submission.current_text}
 
       {/* Multi-Format Publishing & Export Modal */}
       {isExportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0A120E] rounded-2xl max-w-lg w-full shadow-2xl border border-emerald-900/80 max-h-[85vh] my-auto flex flex-col overflow-hidden animate-scale-in text-zinc-100">
+            <div className="shrink-0 p-5 border-b border-emerald-950 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Download className="w-5 h-5 text-blue-600" />
-                <h3 className="text-base font-bold text-slate-900">Publish & Export Content</h3>
+                <Download className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-extrabold text-white">Publish & Export Content</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsExportModalOpen(false)}
-                className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="text-xs text-zinc-400 hover:text-white cursor-pointer p-1"
               >
                 ✕ Close
               </button>
             </div>
 
-            <p className="text-xs text-slate-600">
-              Export your verified, compliant draft into standard enterprise formats or export the complete audit trail.
-            </p>
+            <div className="overflow-y-auto p-5 space-y-4">
+              <p className="text-xs text-zinc-400">
+                Export your verified, compliant draft into standard enterprise formats or export the complete audit trail.
+              </p>
 
-            <div className="space-y-3">
-              {/* Option 1: Markdown (.md) */}
-              <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 transition-all flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                    <FileCode className="w-4 h-4" />
+              <div className="space-y-3">
+                {/* Option 1: Markdown (.md) */}
+                <div className="p-3.5 rounded-xl border border-emerald-950 bg-[#060B08] hover:border-emerald-500/40 transition-all flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center justify-center shrink-0">
+                      <FileCode className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Clean Markdown (.md)</div>
+                      <div className="text-[11px] text-zinc-400">Includes frontmatter metadata, headers, and clean prose</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">Clean Markdown (.md)</div>
-                    <div className="text-[11px] text-slate-500">Includes frontmatter metadata, headers, and clean prose</div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExportMarkdown}
+                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                  >
+                    {copiedExportFormat === 'md' ? <CheckCheck className="w-3.5 h-3.5 text-black" /> : <Download className="w-3.5 h-3.5" />}
+                    <span>{copiedExportFormat === 'md' ? 'Downloaded!' : 'Download .md'}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleExportMarkdown}
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  {copiedExportFormat === 'md' ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Download className="w-3.5 h-3.5" />}
-                  <span>{copiedExportFormat === 'md' ? 'Downloaded!' : 'Download .md'}</span>
-                </button>
-              </div>
 
-              {/* Option 2: Clean HTML for CMS */}
-              <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 transition-all flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                    <Copy className="w-4 h-4" />
+                {/* Option 2: Clean HTML for CMS */}
+                <div className="p-3.5 rounded-xl border border-emerald-950 bg-[#060B08] hover:border-emerald-500/40 transition-all flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-950 text-cyan-400 border border-emerald-800 flex items-center justify-center shrink-0">
+                      <Copy className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">CMS HTML Snippet</div>
+                      <div className="text-[11px] text-zinc-400">Formatted semantic HTML ready for WordPress, Webflow, or Notion</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">CMS HTML Snippet</div>
-                    <div className="text-[11px] text-slate-500">Formatted semantic HTML ready for WordPress, Webflow, or Notion</div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyHtml}
+                    className="px-3 py-1.5 bg-[#0A120E] border border-emerald-900/60 hover:bg-emerald-950/60 text-emerald-300 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    {copiedExportFormat === 'html' ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
+                    <span>{copiedExportFormat === 'html' ? 'Copied HTML!' : 'Copy HTML'}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCopyHtml}
-                  className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  {copiedExportFormat === 'html' ? <CheckCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                  <span>{copiedExportFormat === 'html' ? 'Copied HTML!' : 'Copy HTML'}</span>
-                </button>
-              </div>
 
-              {/* Option 3: Compliance Audit JSON Trail */}
-              <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 transition-all flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                    <FileText className="w-4 h-4" />
+                {/* Option 3: Compliance Audit JSON Trail */}
+                <div className="p-3.5 rounded-xl border border-emerald-950 bg-[#060B08] hover:border-emerald-500/40 transition-all flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-950 text-[#00FF87] border border-emerald-800 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Executive Audit Trail (.json)</div>
+                      <div className="text-[11px] text-zinc-400">Full audit log of resolved findings, policy citations, and timestamps</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">Executive Audit Trail (.json)</div>
-                    <div className="text-[11px] text-slate-500">Full audit log of resolved findings, policy citations, and timestamps</div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExportAuditReport}
+                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                  >
+                    {copiedExportFormat === 'json' ? <CheckCheck className="w-3.5 h-3.5 text-black" /> : <Download className="w-3.5 h-3.5" />}
+                    <span>{copiedExportFormat === 'json' ? 'Exported!' : 'Export JSON'}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleExportAuditReport}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  {copiedExportFormat === 'json' ? <CheckCheck className="w-3.5 h-3.5 text-white" /> : <Download className="w-3.5 h-3.5" />}
-                  <span>{copiedExportFormat === 'json' ? 'Exported!' : 'Export JSON'}</span>
-                </button>
               </div>
             </div>
 
-            <div className="pt-2 text-right">
+            <div className="shrink-0 p-4 border-t border-emerald-950 bg-[#060B08] flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setIsExportModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 bg-[#0A120E] border border-emerald-900/60 hover:bg-emerald-950/60 text-zinc-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 Done
               </button>
