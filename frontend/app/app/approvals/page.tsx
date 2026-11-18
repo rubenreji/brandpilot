@@ -29,7 +29,8 @@ export default function ApprovalCentrePage() {
     currentUser,
     setCurrentRole,
     submissions,
-    reviewSubmission
+    reviewSubmission,
+    approvalHistory
   } = useBrandPilot();
 
   const [filter, setFilter] = useState<'all' | 'in_review' | 'approved' | 'changes_requested'>('all');
@@ -136,6 +137,73 @@ export default function ApprovalCentrePage() {
         <span className="hidden sm:inline font-mono text-[10px] text-emerald-400 px-2.5 py-1 rounded bg-emerald-950 border border-emerald-800">
           SOC-2 & ISO 27001 Stamped
         </span>
+      </div>
+
+      {/* Visual Governance Workflow Architecture */}
+      <div className="bg-[#0A120E] rounded-2xl p-5 border border-emerald-950/80 shadow-lg space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span>End-to-End Enterprise Governance Lifecycle</span>
+          </div>
+          <span className="text-[10px] font-mono text-zinc-500">Continuous Human-in-the-Loop Verification</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {[
+            {
+              step: '1. Ingestion',
+              title: 'Vector Parsing',
+              desc: 'pgvector HNSW chunks indexed from brand manual.',
+              badge: 'Semantic Core',
+              color: 'text-emerald-400',
+              border: 'border-emerald-950'
+            },
+            {
+              step: '2. Audit',
+              title: 'Triple-Layer AI',
+              desc: 'Deterministic + RAG + LLM checks flag violations.',
+              badge: 'Automated',
+              color: 'text-amber-400',
+              border: 'border-amber-950/60'
+            },
+            {
+              step: '3. Correction',
+              title: 'Studio Remediation',
+              desc: 'Authors apply 1-click source-grounded fixes.',
+              badge: 'Author Action',
+              color: 'text-cyan-400',
+              border: 'border-cyan-950/60'
+            },
+            {
+              step: '4. Evaluation',
+              title: 'Reviewer Feedback',
+              desc: 'Brand managers inspect citations & add comments.',
+              badge: 'Human Review',
+              color: 'text-purple-400',
+              border: 'border-purple-950/60'
+            },
+            {
+              step: '5. Release',
+              title: 'Cryptographic Stamp',
+              desc: 'Digital sign-off hash generated for compliance.',
+              badge: 'Certified',
+              color: 'text-[#00FF87]',
+              border: 'border-emerald-800/80'
+            }
+          ].map((item, i) => (
+            <div key={i} className={`p-3.5 bg-[#060B08] rounded-xl border ${item.border} space-y-1.5 relative`}>
+              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                <span>{item.step}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-[#0A120E] ${item.color}`}>
+                  {item.badge}
+                </span>
+              </div>
+              <h4 className="text-xs font-bold text-white">{item.title}</h4>
+              <p className="text-[11px] text-zinc-400 leading-snug">{item.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Filter Tabs */}
@@ -304,6 +372,73 @@ export default function ApprovalCentrePage() {
         </table>
       </div>
 
+      {/* Historical Approvals & Reviewer Comments Archive */}
+      <div className="bg-[#0A120E] rounded-2xl border border-emerald-950/80 shadow-lg overflow-hidden space-y-4 p-5">
+        <div className="flex items-center justify-between border-b border-emerald-950 pb-3">
+          <div className="flex items-center gap-2">
+            <Award className="w-4 h-4 text-[#00FF87]" />
+            <h2 className="text-sm font-black text-white uppercase tracking-wider">
+              Approval History & Signed Audit Logs
+            </h2>
+          </div>
+          <span className="text-[11px] text-zinc-500 font-mono">
+            {approvalHistory.length} Recorded Sign-off Action(s)
+          </span>
+        </div>
+
+        {approvalHistory.length === 0 ? (
+          <div className="p-8 text-center text-xs text-zinc-500 font-mono">
+            No historical approval records yet. When you approve or request changes, digital cryptographic records will archive here.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {approvalHistory.map((rec, i) => (
+              <div
+                key={rec.id || i}
+                className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="space-y-1.5 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white">
+                      {rec.submission_title || 'Enterprise Document'}
+                    </span>
+                    <span
+                      className={`text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full border ${
+                        rec.decision === 'approved'
+                          ? 'bg-emerald-950 text-[#00FF87] border-emerald-800'
+                          : rec.decision === 'changes_requested'
+                          ? 'bg-amber-950 text-amber-300 border-amber-800'
+                          : 'bg-rose-950 text-rose-300 border-rose-800'
+                      }`}
+                    >
+                      {rec.decision.replace('_', ' ')}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">v{rec.content_version}</span>
+                  </div>
+
+                  <div className="text-xs text-zinc-300 italic bg-[#0A120E] p-2.5 rounded-lg border border-emerald-950/60">
+                    &quot;{rec.comments || 'No reviewer comments provided.'}&quot;
+                  </div>
+
+                  <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+                    <span>Evaluator: <strong className="text-zinc-300">{rec.reviewer_name}</strong></span>
+                    <span>•</span>
+                    <span>{new Date(rec.timestamp).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0">
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-1 rounded border border-emerald-800/60">
+                    {rec.cryptographic_stamp}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">Digital Audit Seal Verified</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Review Decision Dialog */}
       {decisionModalOpen && selectedSub && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -358,6 +493,30 @@ export default function ApprovalCentrePage() {
                   onChange={e => setComments(e.target.value)}
                   className="w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-[#050806] text-white"
                 />
+                <div className="flex items-center gap-1.5 flex-wrap pt-2">
+                  <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Quick Comments:</span>
+                  <button
+                    type="button"
+                    onClick={() => setComments('All factual statements and SLA metrics verified against Brand Manual v2.4. Approved for external distribution.')}
+                    className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-[10px] text-emerald-300 hover:text-white cursor-pointer"
+                  >
+                    ✓ SLA Verified
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setComments('Please remove comparative pricing superlatives on page 2 before publication.')}
+                    className="px-2 py-0.5 rounded bg-[#060B08] border border-emerald-900/60 text-[10px] text-zinc-300 hover:text-white cursor-pointer"
+                  >
+                    ⚠ Remove Superlatives
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setComments('Disclaimers required for performance benchmark claims under Section 4.2.')}
+                    className="px-2 py-0.5 rounded bg-[#060B08] border border-emerald-900/60 text-[10px] text-zinc-300 hover:text-white cursor-pointer"
+                  >
+                    ℹ Add Disclaimer
+                  </button>
+                </div>
               </div>
             </div>
 

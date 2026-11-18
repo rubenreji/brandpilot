@@ -38,6 +38,14 @@ export default function CorrectionsIndexPage() {
     );
   };
 
+  const handleLoadDemoDraft = () => {
+    const demoTitle = "Q4 Enterprise Cloud Infrastructure Announcement";
+    const demoText = "We are thrilled to announce that AuraCloud is India's No. 1 AI cloud company. Our revolutionary AI magic guarantees 100% accuracy and is the cheapest solution available on the market today. Join thousands of developers who trust auracloud without hesitation.";
+    const id = createLiveSubmission(demoTitle, demoText);
+    showToast('Loaded demo audited document into studio!', 'success');
+    router.push(`/app/corrections/${id}`);
+  };
+
   if (submissions && submissions.length > 0) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 p-8 bg-[#050806]">
@@ -54,19 +62,30 @@ export default function CorrectionsIndexPage() {
 
   return (
     <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6 text-zinc-100">
-      <div className="pb-6 border-b border-emerald-950/80">
-        <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest mb-1.5">
-          <Edit3 className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Interactive Correction Studio</span>
-          <span>•</span>
-          <span>Live AI Analysis</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-emerald-950/80">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest mb-1.5">
+            <Edit3 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Interactive Correction Studio</span>
+            <span>•</span>
+            <span>Live AI Analysis</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            Correction Studio Workspace
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">
+            Analyze candidate drafts against your brand manual and apply 1-click verified corrections.
+          </p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-          Create & Analyze Your First Draft
-        </h1>
-        <p className="text-sm text-zinc-400 mt-1">
-          All trackers have been reset. Enter or paste text below to start real-time brand governance tracking from your first action.
-        </p>
+
+        <button
+          type="button"
+          onClick={handleLoadDemoDraft}
+          className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl shadow-[0_0_16px_rgba(16,185,129,0.35)] flex items-center gap-2 cursor-pointer transition-all self-start sm:self-auto shrink-0"
+        >
+          <Sparkles className="w-4 h-4 text-black" />
+          <span>Load Demo Audited Draft →</span>
+        </button>
       </div>
 
       <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-2xl space-y-5">

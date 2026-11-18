@@ -18,7 +18,13 @@ import {
   Layers,
   BarChart3,
   ExternalLink,
-  RotateCcw
+  RotateCcw,
+  Activity,
+  Filter,
+  Check,
+  FileText,
+  Shield,
+  Tag
 } from 'lucide-react';
 import {
   BarChart,
@@ -28,12 +34,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Legend
+  Cell
 } from 'recharts';
 
 export default function DashboardPage() {
@@ -45,15 +46,22 @@ export default function DashboardPage() {
     findings,
     facts,
     terminology,
+    activities,
     resetAllTrackers
   } = useBrandPilot();
 
   const [dateRange, setDateRange] = useState('Last 30 Days');
+  const [activityFilter, setActivityFilter] = useState<'all' | 'audit' | 'approval' | 'policy' | 'correction'>('all');
 
   // Dynamic KPI calculation from store
   const totalAudits = submissions.length;
   const pendingReviews = submissions.filter(s => s.status === 'in_review' || s.status === 'pending_review').length;
   const approvedCount = submissions.filter(s => s.status === 'approved').length;
+
+  // Average score
+  const avgScore = totalAudits > 0
+    ? Math.round(submissions.reduce((acc, s) => acc + (s.compliance_score || 0), 0) / totalAudits)
+    : 100;
 
   // Flatten findings
   const allFindings = Object.values(findings).flat();
@@ -76,15 +84,6 @@ export default function DashboardPage() {
     { name: 'Missing Disclaimers', count: disclaimersCount, fill: '#06B6D4' }
   ];
 
-  // Audit activity trend data dynamically constructed from actual submissions
-  const auditTrendData = submissions.length === 0
-    ? []
-    : submissions.slice().reverse().map((sub, idx) => ({
-        week: `Draft ${idx + 1}`,
-        audits: idx + 1,
-        violations: sub.findings_count
-      }));
-
   // Pipeline distribution
   const pipelineData = [
     { stage: 'Drafts', count: submissions.filter(s => s.status === 'draft' || s.status === 'audited').length },
@@ -93,23 +92,31 @@ export default function DashboardPage() {
     { stage: 'Approved', count: approvedCount }
   ];
 
-  const COLORS = ['#00FF87', '#F59E0B', '#EF4444', '#10B981', '#06B6D4'];
+  // Filtered activity items
+  const filteredActivities = activities.filter(act => {
+    if (activityFilter === 'all') return true;
+    return act.type === activityFilter;
+  });
 
   return (
     <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in text-zinc-100 selection:bg-emerald-500 selection:text-black">
-      {/* Header with Title & Date Range */}
+      {/* Header with Title, Persona Info & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-emerald-950">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
             <span>{currentWorkspace.name}</span>
             <span>•</span>
-            <span>Workspace Overview</span>
+            <span>Enterprise SaaS Governance</span>
+            <span>•</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950 text-[#00FF87] border border-emerald-800">
+              Live Active Persona: {currentRole}
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             Welcome back, {currentUser.full_name}
           </h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Real-time brand compliance intelligence and pending governance actions.
+            Central telemetry for brand compliance scanning, correction studio, and cryptographic approvals.
           </p>
         </div>
 
@@ -140,7 +147,7 @@ export default function DashboardPage() {
 
           <Link
             href="/app/audit"
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-lg shadow-md transition-all shadow-[0_0_16px_rgba(16,185,129,0.35)] cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-lg shadow-md transition-all shadow-[0_0_16px_rgba(16,185,129,0.35)] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 text-black" />
             <span>Audit Content</span>
@@ -148,91 +155,95 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {/* KPI 1 */}
-        <div className="bg-[#0A120E] p-4 rounded-xl border border-emerald-900/60 shadow-md card-hover-effect">
-          <div className="flex items-center justify-between text-zinc-400 text-xs mb-2">
-            <span>Total Audits</span>
+      {/* Prominent Primary KPI Hierarchy (NexusDash Style) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Primary Card 1: Compliance Health Score */}
+        <div className="bg-[#0A120E] p-5 rounded-2xl border-2 border-emerald-500/40 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between text-zinc-400 text-xs mb-1.5">
+            <span className="font-bold uppercase tracking-wider text-emerald-400">Brand Health Score</span>
+            <ShieldCheck className="w-4 h-4 text-[#00FF87]" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl sm:text-4xl font-black text-white">{avgScore}%</span>
+            <span className="text-xs font-bold text-[#00FF87] flex items-center">
+              <TrendingUp className="w-3 h-3 mr-0.5" /> +14.2%
+            </span>
+          </div>
+          <div className="w-full bg-[#060B08] h-2 rounded-full overflow-hidden mt-3 border border-emerald-950">
+            <div
+              className="bg-linear-to-r from-emerald-500 to-[#00FF87] h-full rounded-full transition-all duration-500"
+              style={{ width: `${avgScore}%` }}
+            />
+          </div>
+          <p className="text-[11px] text-zinc-400 mt-2">
+            {totalAudits > 0 ? `Computed across ${totalAudits} live audited documents` : 'Awaiting initial draft audit'}
+          </p>
+        </div>
+
+        {/* Primary Card 2: Total Content Audits */}
+        <div className="bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg relative overflow-hidden">
+          <div className="flex items-center justify-between text-zinc-400 text-xs mb-1.5">
+            <span className="font-bold uppercase tracking-wider text-zinc-300">Total Audited Drafts</span>
             <FileCheck2 className="w-4 h-4 text-[#00FF87]" />
           </div>
-          <div className="text-2xl font-extrabold text-white">{totalAudits}</div>
-          <div className="text-[11px] text-[#00FF87] font-semibold mt-1 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" /> {totalAudits > 0 ? `${totalAudits} draft(s) tracked` : 'Ready for first audit'}
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl sm:text-4xl font-black text-white">{totalAudits}</span>
+            <span className="text-xs text-zinc-400 font-mono">documents</span>
+          </div>
+          <div className="text-[11px] text-zinc-400 mt-3 flex items-center justify-between pt-2 border-t border-emerald-950/80">
+            <span>Approved: <strong className="text-[#00FF87]">{approvedCount}</strong></span>
+            <span>In Review: <strong className="text-amber-400">{pendingReviews}</strong></span>
           </div>
         </div>
 
-        {/* KPI 2 */}
-        <div className="bg-[#0A120E] p-4 rounded-xl border border-emerald-900/60 shadow-md card-hover-effect">
-          <div className="flex items-center justify-between text-zinc-400 text-xs mb-2">
-            <span>Pending Reviews</span>
+        {/* Primary Card 3: Pending Approvals */}
+        <div className="bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg relative overflow-hidden">
+          <div className="flex items-center justify-between text-zinc-400 text-xs mb-1.5">
+            <span className="font-bold uppercase tracking-wider text-amber-400">Pending Gatekeeper Sign-off</span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="text-2xl font-extrabold text-amber-400">{pendingReviews}</div>
-          <div className="text-[11px] text-zinc-500 font-medium mt-1">
-            Requires human sign-off
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl sm:text-4xl font-black text-amber-400">{pendingReviews}</span>
+            <span className="text-xs text-zinc-400">in review queue</span>
+          </div>
+          <div className="text-[11px] text-zinc-400 mt-3 flex items-center justify-between pt-2 border-t border-emerald-950/80">
+            <span>Avg Turnaround: <strong className="text-white">{avgTurnaround}</strong></span>
+            <Link href="/app/approvals" className="text-emerald-400 hover:underline font-bold text-[11px]">
+              Review Queue →
+            </Link>
           </div>
         </div>
 
-        {/* KPI 3 */}
-        <div className="bg-[#0A120E] p-4 rounded-xl border border-emerald-900/60 shadow-md card-hover-effect">
-          <div className="flex items-center justify-between text-zinc-400 text-xs mb-2">
-            <span>Approved</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-extrabold text-[#00FF87]">{approvedCount}</div>
-          <div className="text-[11px] text-zinc-500 font-medium mt-1">
-            Ready for publishing
-          </div>
-        </div>
-
-        {/* KPI 4 */}
-        <div className="bg-[#0A120E] p-4 rounded-xl border border-emerald-900/60 shadow-md card-hover-effect">
-          <div className="flex items-center justify-between text-zinc-400 text-xs mb-2">
-            <span>Open Issues</span>
-            <AlertTriangle className="w-4 h-4 text-rose-400" />
-          </div>
-          <div className="text-2xl font-extrabold text-rose-400">{openIssues}</div>
-          <div className="text-[11px] text-rose-400/80 font-medium mt-1">
-            Active compliance flags
-          </div>
-        </div>
-
-        {/* KPI 5 */}
-        <div className="bg-[#0A120E] p-4 rounded-xl border border-emerald-900/60 shadow-md card-hover-effect">
-          <div className="flex items-center justify-between text-zinc-400 text-xs mb-2">
-            <span>Issues Resolved</span>
+        {/* Primary Card 4: Issues Resolved & Corrections */}
+        <div className="bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg relative overflow-hidden">
+          <div className="flex items-center justify-between text-zinc-400 text-xs mb-1.5">
+            <span className="font-bold uppercase tracking-wider text-[#00FF87]">Corrections Resolved</span>
             <Sparkles className="w-4 h-4 text-[#00FF87]" />
           </div>
-          <div className="text-2xl font-extrabold text-white">{resolvedIssues}</div>
-          <div className="text-[11px] text-emerald-400 font-semibold mt-1">
-            Corrections accepted
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl sm:text-4xl font-black text-white">{resolvedIssues}</span>
+            <span className="text-xs text-rose-400">({openIssues} pending)</span>
           </div>
-        </div>
-
-        {/* KPI 6 */}
-        <div className="bg-[#0A120E] p-4 rounded-xl border border-emerald-900/60 shadow-md">
-          <div className="flex items-center justify-between text-zinc-400 text-xs mb-2">
-            <span>Avg Turnaround</span>
-            <Clock className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="text-2xl font-extrabold text-white">{avgTurnaround}</div>
-          <div className="text-[11px] text-emerald-400 font-semibold mt-1">
-            -45m vs last quarter
+          <div className="text-[11px] text-zinc-400 mt-3 flex items-center justify-between pt-2 border-t border-emerald-950/80">
+            <span>Knowledge Rules: <strong className="text-white">{facts.length + terminology.length} active</strong></span>
+            <Link href="/app/corrections" className="text-emerald-400 hover:underline font-bold text-[11px]">
+              Open Studio →
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Analytics Visualizations */}
+      {/* Analytics Visualizations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Issue Distribution by Category */}
         <div className="lg:col-span-7 bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-bold text-white">Issue Distribution by Policy Category</h2>
-              <p className="text-xs text-zinc-400">Breakdown of brand violations detected across drafts</p>
+              <h2 className="text-sm font-bold text-white">Brand Violation Distribution by Category</h2>
+              <p className="text-xs text-zinc-400">Deterministic terminology rules + pgvector semantic audit breakdown</p>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-[#00FF87] border border-emerald-800">
               Deterministic + RAG
             </span>
           </div>
@@ -241,7 +252,7 @@ export default function DashboardPage() {
               <ShieldCheck className="w-8 h-8 text-emerald-400 mb-2 opacity-60" />
               <p className="text-xs font-bold text-zinc-200">Trackers Active & Clear</p>
               <p className="text-[11px] text-zinc-400 mt-1 max-w-sm">
-                No policy issues detected yet. When you audit documents, compliance findings and violation categories will be dynamically charted here.
+                No policy issues detected yet. Audit candidate text to dynamically populate live category distributions.
               </p>
               <Link href="/app/audit" className="mt-3 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-all shadow-[0_0_12px_rgba(16,185,129,0.3)]">
                 Audit First Draft →
@@ -268,16 +279,16 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Approval Pipeline Status */}
+        {/* Approval Workflow Pipeline */}
         <div className="lg:col-span-5 bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold text-white">Approval Workflow Pipeline</h2>
+              <h2 className="text-sm font-bold text-white">Governance Approval Pipeline</h2>
               <Link href="/app/approvals" className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1">
                 View Queue <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
-            <p className="text-xs text-zinc-400 mb-4">Stage distribution of active submissions</p>
+            <p className="text-xs text-zinc-400 mb-4">Stage distribution of active candidate content</p>
 
             <div className="space-y-3">
               {pipelineData.map(item => (
@@ -305,89 +316,137 @@ export default function DashboardPage() {
           <div className="mt-4 p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-xs text-emerald-300 flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-[#00FF87] shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold block text-white">Human Gatekeeper Enforced:</span>
-              AI recommendations guide the creator, but approvals are cryptographically stamped by assigned managers.
+              <span className="font-bold block text-white">Cryptographic Human Gatekeeper:</span>
+              AI recommendations guide the creator, but public release requires authenticated reviewer sign-off.
             </div>
           </div>
         </div>
       </div>
 
-      {/* Activity Feed & Quick Actions */}
+      {/* Multi-Source Activity Feed & Submissions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Recent Content Submissions */}
-        <div className="lg:col-span-8 bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
+        {/* Activity Feed Section */}
+        <div className="lg:col-span-8 bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-950">
             <div>
-              <h2 className="text-sm font-bold text-white">Recent Content Audits & Submissions</h2>
-              <p className="text-xs text-zinc-400">Live draft status and identified compliance findings</p>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#00FF87]" />
+                <span>Multi-Source Real-Time Activity Feed</span>
+              </h2>
+              <p className="text-xs text-zinc-400">Live timeline of audits, policy revisions, corrections, and approvals</p>
             </div>
-            <Link href="/app/audit" className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold">
-              New Audit →
-            </Link>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 bg-[#060B08] p-1 rounded-xl border border-emerald-950 text-xs overflow-x-auto">
+              <button
+                onClick={() => setActivityFilter('all')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activityFilter === 'all'
+                    ? 'bg-emerald-500 text-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                All ({activities.length})
+              </button>
+              <button
+                onClick={() => setActivityFilter('audit')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activityFilter === 'audit'
+                    ? 'bg-emerald-500 text-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Audits
+              </button>
+              <button
+                onClick={() => setActivityFilter('approval')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activityFilter === 'approval'
+                    ? 'bg-emerald-500 text-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Approvals
+              </button>
+              <button
+                onClick={() => setActivityFilter('correction')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activityFilter === 'correction'
+                    ? 'bg-emerald-500 text-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Corrections
+              </button>
+              <button
+                onClick={() => setActivityFilter('policy')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activityFilter === 'policy'
+                    ? 'bg-emerald-500 text-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Policy
+              </button>
+            </div>
           </div>
 
-          {submissions.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center p-6 bg-[#060B08] rounded-xl border border-emerald-950/80 my-2">
-              <FileCheck2 className="w-10 h-10 text-emerald-400/50 mb-3" />
-              <h3 className="text-sm font-bold text-white">No drafts audited yet</h3>
-              <p className="text-xs text-zinc-400 mt-1 max-w-sm">
-                Trackers are reset and will begin recording from your very first action. Audit candidate copy, press releases, or articles to begin live tracking.
+          {filteredActivities.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center p-6 bg-[#060B08] rounded-xl border border-emerald-950/80">
+              <Activity className="w-8 h-8 text-emerald-400/40 mb-2" />
+              <p className="text-xs font-bold text-zinc-300">No activity logged for this filter</p>
+              <p className="text-[11px] text-zinc-500 mt-1 max-w-sm">
+                Activity records are generated automatically upon content audits, corrections, policy edits, and approvals.
               </p>
-              <Link
-                href="/app/audit"
-                className="mt-4 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all shadow-[0_0_16px_rgba(16,185,129,0.35)]"
-              >
-                Audit Content Now →
-              </Link>
             </div>
           ) : (
-            <div className="divide-y divide-emerald-950/60">
-              {submissions.map(sub => (
-                <div key={sub.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-white truncate">{sub.title}</span>
-                      <span
-                        className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full border ${
-                          sub.status === 'approved'
-                            ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                            : sub.status === 'in_review' || sub.status === 'pending_review'
-                            ? 'bg-amber-950 text-amber-300 border-amber-800'
-                            : 'bg-rose-950 text-rose-300 border-rose-800'
-                        }`}
-                      >
-                        {sub.status.replace('_', ' ')}
-                      </span>
+            <div className="space-y-3">
+              {filteredActivities.map(item => (
+                <div
+                  key={item.id}
+                  className="p-3.5 rounded-xl border border-emerald-950 bg-[#060B08] hover:border-emerald-900 transition-colors flex items-start justify-between gap-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-800/80 flex items-center justify-center shrink-0">
+                      {item.type === 'audit' && <FileCheck2 className="w-3.5 h-3.5 text-[#00FF87]" />}
+                      {item.type === 'approval' && <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />}
+                      {item.type === 'correction' && <Sparkles className="w-3.5 h-3.5 text-emerald-400" />}
+                      {item.type === 'policy' && <BookOpen className="w-3.5 h-3.5 text-amber-400" />}
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-zinc-400 mt-1">
-                      <span>By {sub.creator_name}</span>
-                      <span>•</span>
-                      <span>{sub.word_count} words</span>
-                      <span>•</span>
-                      <span>{sub.findings_count} findings ({sub.critical_count} critical)</span>
+
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-xs text-white">{item.title}</span>
+                        {item.status_badge && (
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800/80">
+                            {item.status_badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{item.description}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono mt-1.5">
+                        <span>{item.actor_name} ({item.actor_role})</span>
+                        <span>•</span>
+                        <span>{item.timestamp}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right">
-                      <div className="text-xs font-bold text-[#00FF87]">{sub.compliance_score}%</div>
-                      <div className="text-[10px] text-zinc-500">Score</div>
-                    </div>
-
+                  {item.target_link && (
                     <Link
-                      href={`/app/corrections/${sub.id}`}
-                      className="px-3 py-1.5 bg-[#060B08] hover:bg-emerald-950/60 hover:text-[#00FF87] text-zinc-200 rounded-lg text-xs font-semibold border border-emerald-900/50 transition-colors cursor-pointer"
+                      href={item.target_link}
+                      className="px-2.5 py-1 text-[11px] font-bold text-emerald-400 hover:text-[#00FF87] hover:bg-emerald-950/60 rounded-md border border-emerald-900/40 shrink-0 transition-colors"
                     >
-                      Open Studio →
+                      View →
                     </Link>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Quick Governance Actions */}
+        {/* Governance Quick Actions & Shortcuts */}
         <div className="lg:col-span-4 bg-[#0A120E] p-5 rounded-2xl border border-emerald-900/60 shadow-lg space-y-3">
           <h2 className="text-sm font-bold text-white">Governance Quick Actions</h2>
           <p className="text-xs text-zinc-400 pb-2 border-b border-emerald-950">
@@ -403,8 +462,8 @@ export default function DashboardPage() {
                 +F
               </div>
               <div className="text-left">
-                <div className="text-xs font-bold text-white group-hover:text-[#00FF87]">Add Approved Fact</div>
-                <div className="text-[11px] text-zinc-400">{facts.length} active corporate facts</div>
+                <div className="text-xs font-bold text-white group-hover:text-[#00FF87]">Manage Corporate Facts</div>
+                <div className="text-[11px] text-zinc-400">{facts.length} active verified facts</div>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF87]" />
@@ -419,8 +478,8 @@ export default function DashboardPage() {
                 +T
               </div>
               <div className="text-left">
-                <div className="text-xs font-bold text-white group-hover:text-[#00FF87]">Configure Terminology</div>
-                <div className="text-[11px] text-zinc-400">{terminology.length} prohibited & preferred rules</div>
+                <div className="text-xs font-bold text-white group-hover:text-[#00FF87]">Configure Terminology Rules</div>
+                <div className="text-[11px] text-zinc-400">{terminology.length} prohibited & preferred terms</div>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF87]" />
@@ -435,8 +494,8 @@ export default function DashboardPage() {
                 HEX
               </div>
               <div className="text-left">
-                <div className="text-xs font-bold text-white group-hover:text-[#00FF87]">Visual Palette Check</div>
-                <div className="text-[11px] text-zinc-400">Color swatch & logo validation</div>
+                <div className="text-xs font-bold text-white group-hover:text-[#00FF87]">Visual Identity Tokens</div>
+                <div className="text-[11px] text-zinc-400">Color tokens, logo exclusion & typography</div>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF87]" />
@@ -452,7 +511,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-left">
                 <div className="text-xs font-bold text-white group-hover:text-[#00FF87]">View Friction Heatmap</div>
-                <div className="text-[11px] text-zinc-400">Identify chronic team mistakes</div>
+                <div className="text-[11px] text-zinc-400">Identify chronic compliance violations</div>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF87]" />

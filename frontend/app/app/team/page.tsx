@@ -3,7 +3,97 @@
 import React, { useState } from 'react';
 import { useBrandPilot } from '@/lib/store';
 import { UserRole } from '@/lib/types';
-import { Users, UserPlus, Shield, CheckCircle2, Mail, Lock } from 'lucide-react';
+import {
+  Users,
+  UserPlus,
+  Shield,
+  CheckCircle2,
+  XCircle,
+  Lock,
+  Sparkles,
+  FileCheck2,
+  Sliders,
+  Scale,
+  Award,
+  BarChart3,
+  BookOpen
+} from 'lucide-react';
+
+interface PermissionRow {
+  category: string;
+  action: string;
+  description: string;
+  admin: boolean;
+  reviewer: boolean;
+  creator: boolean;
+}
+
+const PERMISSION_MATRIX: PermissionRow[] = [
+  {
+    category: 'Knowledge Base',
+    action: 'Ingest Guidelines & Specs',
+    description: 'Upload PDF and markdown brand documents into pgvector embeddings',
+    admin: true,
+    reviewer: false,
+    creator: false
+  },
+  {
+    category: 'Knowledge Base',
+    action: 'Edit Terminology & Facts',
+    description: 'Define prohibited words, preferred phrases, and verified technical claims',
+    admin: true,
+    reviewer: false,
+    creator: false
+  },
+  {
+    category: 'Content Auditing',
+    action: 'Run Automated AI Audits',
+    description: 'Submit raw draft copy for deterministic + RAG compliance scanning',
+    admin: true,
+    reviewer: true,
+    creator: true
+  },
+  {
+    category: 'Correction Studio',
+    action: 'Accept / Reject AI Suggestions',
+    description: 'Apply high-confidence automated rewrites and generate clean revisions',
+    admin: true,
+    reviewer: false,
+    creator: true
+  },
+  {
+    category: 'Governance & Approval',
+    action: 'Review Approval Queue',
+    description: 'Evaluate submitted drafts against guidelines and cite policy violations',
+    admin: true,
+    reviewer: true,
+    creator: false
+  },
+  {
+    category: 'Governance & Approval',
+    action: 'Issue Publication Sign-off',
+    description: 'Cryptographically stamp final compliance approval for public release',
+    admin: true,
+    reviewer: true,
+    creator: false
+  },
+  {
+    category: 'Analytics & Telemetry',
+    action: 'View Team Friction Heatmap',
+    description: 'Inspect violation trends, turnaround velocity, and team compliance metrics',
+    admin: true,
+    reviewer: true,
+    creator: true
+  },
+  {
+    category: 'Administration',
+    action: 'Manage Team & Permissions',
+    description: 'Invite members, assign governance roles, and configure workspace settings',
+    admin: true,
+    reviewer: false,
+    creator: false
+  }
+];
 
 export default function TeamPage() {
   const { currentWorkspace, currentRole, setCurrentRole, showToast } = useBrandPilot();
@@ -53,10 +143,31 @@ export default function TeamPage() {
     setNewInvite({ name: '', email: '', role: 'creator' });
   };
 
+  const roleCapabilities = {
+    admin: {
+      badge: 'Organisation Administrator',
+      badgeColor: 'bg-emerald-950 border-emerald-500/50 text-[#00FF87]',
+      summary: 'You currently have unrestricted global governance authority across all 8 modules.',
+      allowed: ['Full Rule Editing', 'Guideline Ingestion', 'Audit & Corrections', 'Gatekeeper Approval', 'User Management']
+    },
+    reviewer: {
+      badge: 'Brand Reviewer / Gatekeeper',
+      badgeColor: 'bg-cyan-950 border-cyan-500/50 text-cyan-300',
+      summary: 'You are responsible for reviewing submitted copy, auditing claims, and cryptographically signing off releases.',
+      allowed: ['Audit Submissions', 'Request Changes', 'Review AI Citations', 'Issue Final Sign-off', 'View Analytics']
+    },
+    creator: {
+      badge: 'Content Creator',
+      badgeColor: 'bg-emerald-950 border-emerald-800 text-emerald-400',
+      summary: 'You draft, audit, and refine candidate copy. Submissions require Reviewer or Admin sign-off before release.',
+      allowed: ['Run Content Audits', 'Accept AI Suggestions', 'Submit to Review Queue', 'Inspect Diff Revisions']
+    }
+  }[currentRole];
+
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in text-zinc-100 selection:bg-emerald-500 selection:text-black">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-emerald-950/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-emerald-950">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest mb-1.5">
             <Users className="w-3.5 h-3.5 text-emerald-400" />
@@ -65,10 +176,10 @@ export default function TeamPage() {
             <span>Access Control & Personas</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Team & Role Permissions
+            Team & Role-Based Access Control
           </h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Manage organization members, reviewers, content creators, and governance permissions.
+            Enforce segregation of duties between content authors, compliance reviewers, and workspace administrators.
           </p>
         </div>
 
@@ -77,47 +188,202 @@ export default function TeamPage() {
             onClick={() => setIsInviteOpen(true)}
             className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all shadow-[0_0_16px_rgba(16,185,129,0.35)] cursor-pointer"
           >
-            <UserPlus className="w-3.5 h-3.5" />
+            <UserPlus className="w-3.5 h-3.5 text-black" />
             <span>Invite Colleague</span>
           </button>
         )}
       </div>
 
-      {/* Role Definitions Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#0A120E] rounded-2xl p-5 border border-purple-900/40 shadow-lg">
-          <div className="flex items-center gap-2 font-black text-xs text-purple-300 uppercase tracking-wider mb-2">
-            <Shield className="w-4 h-4 text-purple-400" />
-            <span>Organisation Administrator</span>
+      {/* Live Role Simulator & Active Persona Banner */}
+      <div className="bg-[#0A120E] border-2 border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-800 flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5 text-[#00FF87]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-zinc-400 uppercase tracking-wider font-bold">Live Active Persona:</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-black border ${roleCapabilities.badgeColor}`}>
+                  {roleCapabilities.badge}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-300 mt-1">
+                {roleCapabilities.summary}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Full governance authority. Ingests guidelines, manages approved facts and terminology, invites team members, and reviews analytics.
-          </p>
+
+          {/* Quick Persona Switcher */}
+          <div className="flex items-center gap-1.5 bg-[#060B08] p-1.5 rounded-xl border border-emerald-950 shrink-0">
+            <span className="text-[10px] font-bold text-zinc-400 px-2 uppercase tracking-wider">Switch Persona:</span>
+            <button
+              onClick={() => {
+                setCurrentRole('admin');
+                showToast('Switched to Administrator Persona', 'info');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                currentRole === 'admin'
+                  ? 'bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-emerald-950/40'
+              }`}
+            >
+              Admin
+            </button>
+            <button
+              onClick={() => {
+                setCurrentRole('reviewer');
+                showToast('Switched to Reviewer Persona', 'info');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                currentRole === 'reviewer'
+                  ? 'bg-cyan-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-cyan-950/40'
+              }`}
+            >
+              Reviewer
+            </button>
+            <button
+              onClick={() => {
+                setCurrentRole('creator');
+                showToast('Switched to Creator Persona', 'info');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                currentRole === 'creator'
+                  ? 'bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-emerald-950/40'
+              }`}
+            >
+              Creator
+            </button>
+          </div>
         </div>
 
-        <div className="bg-[#0A120E] rounded-2xl p-5 border border-cyan-900/40 shadow-lg">
-          <div className="flex items-center gap-2 font-black text-xs text-cyan-300 uppercase tracking-wider mb-2">
-            <Shield className="w-4 h-4 text-cyan-400" />
-            <span>Brand Manager / Reviewer</span>
-          </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Human approval gatekeeper. Reviews submitted drafts, inspects AI citations, requests revisions, and issues publication sign-off.
-          </p>
-        </div>
-
-        <div className="bg-[#0A120E] rounded-2xl p-5 border border-emerald-900/40 shadow-lg">
-          <div className="flex items-center gap-2 font-black text-xs text-emerald-300 uppercase tracking-wider mb-2">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            <span>Content Creator</span>
-          </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Drafts and audits content. Evaluates automated findings, accepts suggested brand corrections, and submits revisions for approval.
-          </p>
+        {/* Enabled Capabilities Pills */}
+        <div className="pt-3 border-t border-emerald-950/80 flex items-center gap-2 flex-wrap text-xs">
+          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Your Active Capabilities:</span>
+          {roleCapabilities.allowed.map(cap => (
+            <span
+              key={cap}
+              className="px-2.5 py-1 rounded-md bg-[#060B08] border border-emerald-900/60 text-zinc-200 text-[11px] font-medium flex items-center gap-1.5"
+            >
+              <CheckCircle2 className="w-3 h-3 text-[#00FF87]" />
+              <span>{cap}</span>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Members Table */}
+      {/* Role-Based Access Control Permission Matrix */}
+      <div className="bg-[#0A120E] rounded-2xl border border-emerald-900/60 shadow-xl overflow-hidden">
+        <div className="p-5 border-b border-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-[#00FF87]" />
+              <span>Role-Based Access Control (RBAC) Permission Matrix</span>
+            </h2>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Auditable operational permissions mapped to compliance governance tiers
+            </p>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-mono">
+            <span className="flex items-center gap-1.5 text-zinc-300">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#00FF87]" /> Authorized
+            </span>
+            <span className="flex items-center gap-1.5 text-zinc-500">
+              <Lock className="w-3.5 h-3.5 text-zinc-600" /> Restricted
+            </span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#060B08] border-b border-emerald-950 text-zinc-400 uppercase font-black tracking-wider">
+              <tr>
+                <th className="py-3.5 px-4">Permission Module & Action</th>
+                <th className="py-3.5 px-4 hidden md:table-cell">Governance Description</th>
+                <th className="py-3.5 px-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-white">Admin</span>
+                    <span className="text-[10px] text-emerald-400 font-normal">Governance Lead</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-white">Reviewer</span>
+                    <span className="text-[10px] text-cyan-400 font-normal">Gatekeeper</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-white">Creator</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">Content Author</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-emerald-950/60 font-sans">
+              {PERMISSION_MATRIX.map((perm, idx) => (
+                <tr key={idx} className="hover:bg-[#060B08]/80 transition-colors">
+                  <td className="py-3.5 px-4">
+                    <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{perm.category}</div>
+                    <div className="font-bold text-zinc-100 mt-0.5">{perm.action}</div>
+                  </td>
+                  <td className="py-3.5 px-4 text-zinc-400 text-xs hidden md:table-cell max-w-sm">
+                    {perm.description}
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    {perm.admin ? (
+                      <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-950/80 border border-emerald-800 text-[#00FF87]">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-black/40 border border-zinc-900 text-zinc-700">
+                        <Lock className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    {perm.reviewer ? (
+                      <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-cyan-950/80 border border-cyan-800 text-cyan-300">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-black/40 border border-zinc-900 text-zinc-700">
+                        <Lock className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    {perm.creator ? (
+                      <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-950/80 border border-emerald-800 text-[#00FF87]">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-black/40 border border-zinc-900 text-zinc-700">
+                        <Lock className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Team Members List */}
       <div className="bg-[#0A120E] rounded-2xl border border-emerald-950/80 shadow-lg overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-emerald-950 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-black text-white">Active Organization Roster</h2>
+            <p className="text-xs text-zinc-400">Team members provisioned in AuraCloud Enterprise Governance</p>
+          </div>
+          <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-[#060B08] border border-emerald-950 text-emerald-400">
+            {members.length} Members
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#060B08] border-b border-emerald-950 text-zinc-400 uppercase font-bold tracking-wider">
@@ -126,22 +392,27 @@ export default function TeamPage() {
                 <th className="py-3.5 px-4">Work Email</th>
                 <th className="py-3.5 px-4">Title / Department</th>
                 <th className="py-3.5 px-4">Assigned Role</th>
-                <th className="py-3.5 px-4 text-right">Quick Switch</th>
+                <th className="py-3.5 px-4 text-right">Interactive Persona Switch</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-emerald-950/60">
               {members.map(m => (
                 <tr key={m.id} className="hover:bg-[#060B08]/80 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-zinc-100">{m.name}</td>
+                  <td className="py-3.5 px-4 font-bold text-zinc-100 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-emerald-950 border border-emerald-800 text-[10px] font-black text-[#00FF87] flex items-center justify-center">
+                      {m.name.charAt(0)}
+                    </span>
+                    <span>{m.name}</span>
+                  </td>
                   <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">{m.email}</td>
                   <td className="py-3.5 px-4 text-zinc-400">{m.title}</td>
                   <td className="py-3.5 px-4">
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border ${
                         m.role === 'admin'
-                          ? 'bg-purple-950/60 text-purple-300 border-purple-800/60'
+                          ? 'bg-emerald-950 text-[#00FF87] border-emerald-600'
                           : m.role === 'reviewer'
-                          ? 'bg-cyan-950/60 text-cyan-300 border-cyan-800/60'
+                          ? 'bg-cyan-950 text-cyan-300 border-cyan-800'
                           : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
                       }`}
                     >
@@ -154,9 +425,13 @@ export default function TeamPage() {
                         setCurrentRole(m.role);
                         showToast(`Switched active persona to ${m.name} (${m.role})`, 'info');
                       }}
-                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#060B08] hover:bg-emerald-950/50 hover:text-emerald-400 text-zinc-300 border border-emerald-900/60 transition-colors cursor-pointer"
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                        currentRole === m.role
+                          ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                          : 'bg-[#060B08] hover:bg-emerald-950/50 hover:text-emerald-400 text-zinc-300 border-emerald-900/60'
+                      }`}
                     >
-                      Simulate As →
+                      {currentRole === m.role ? '✓ Active Persona' : 'Simulate As →'}
                     </button>
                   </td>
                 </tr>
@@ -211,11 +486,11 @@ export default function TeamPage() {
                   <select
                     value={newInvite.role}
                     onChange={e => setNewInvite({ ...newInvite, role: e.target.value as any })}
-                    className="w-full text-xs p-2.5 border border-emerald-900/60 rounded-xl bg-[#060B08] text-zinc-100 focus:outline-none focus:border-emerald-500"
+                    className="w-full text-xs p-2.5 border border-emerald-900/60 rounded-xl bg-[#060B08] text-zinc-100 focus:outline-none focus:border-emerald-500 cursor-pointer"
                   >
-                    <option value="creator">Content Creator</option>
-                    <option value="reviewer">Brand Reviewer</option>
-                    <option value="admin">Administrator</option>
+                    <option value="creator">Content Creator (Audits & Edits)</option>
+                    <option value="reviewer">Brand Reviewer (Gatekeeper Sign-off)</option>
+                    <option value="admin">Administrator (Global Governance)</option>
                   </select>
                 </div>
               </div>

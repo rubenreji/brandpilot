@@ -206,19 +206,33 @@ export interface ContentRevision {
   content_text: string;
   change_summary: string;
   author_name: string;
+  compliance_score?: number;
   timestamp: string;
 }
 
 export interface ApprovalRecord {
   id: string;
   submission_id: string;
+  submission_title?: string;
   reviewer_id: string;
   reviewer_name: string;
-  decision: string;
+  decision: 'approved' | 'rejected' | 'changes_requested' | string;
   comments?: string;
   content_version: number;
   timestamp: string;
   cryptographic_stamp: string;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: 'audit' | 'correction' | 'approval' | 'policy';
+  title: string;
+  description: string;
+  actor_name: string;
+  actor_role: UserRole;
+  target_link?: string;
+  timestamp: string;
+  status_badge?: string;
 }
 
 export interface Notification {

@@ -9,7 +9,10 @@ import {
   BrandAsset,
   ContentSubmission,
   ComplianceFinding,
-  Notification
+  Notification,
+  ContentRevision,
+  ApprovalRecord,
+  ActivityItem
 } from "./types";
 
 export const INITIAL_ORG: Organization = {
@@ -373,9 +376,340 @@ export const INITIAL_ASSETS: BrandAsset[] = [
   }
 ];
 
-export const INITIAL_SUBMISSIONS: ContentSubmission[] = [];
+export const INITIAL_SUBMISSIONS: ContentSubmission[] = [
+  {
+    id: "sub-q4-launch",
+    organization_id: "org-auracloud-001",
+    title: "Q4 Enterprise Cloud Infrastructure Announcement",
+    content_type: "press_release",
+    target_platform: "Corporate Newsroom & PR Newswire",
+    associated_product: "AuraCloud Enterprise",
+    campaign_name: "Q4 Enterprise Scaling",
+    original_text: "We are thrilled to announce that AuraCloud is India's No. 1 AI cloud company. Our revolutionary AI magic guarantees 100% accuracy and is the cheapest solution available on the market today. Join thousands of developers who trust auracloud without hesitation.",
+    current_text: "We are thrilled to announce that AuraCloud is a leading enterprise cloud platform. Our intelligent automated orchestration delivers high-reliability automated verification and is a cost-effective enterprise solution available on the market today. Join thousands of developers who trust AuraCloud without hesitation.",
+    status: "in_review",
+    word_count: 36,
+    character_count: 260,
+    compliance_score: 98,
+    creator_id: "user-creator-1",
+    creator_name: "Marcus Vance",
+    created_at: "2026-11-18T18:00:00Z",
+    updated_at: "2026-11-18T18:30:00Z",
+    findings_count: 5,
+    critical_count: 0
+  },
+  {
+    id: "sub-security-whitepaper",
+    organization_id: "org-auracloud-001",
+    title: "AuraCloud Zero-Trust Architecture Whitepaper",
+    content_type: "marketing_copy",
+    target_platform: "Enterprise Security Resource Portal",
+    associated_product: "AuraCloud Mesh & Vault",
+    campaign_name: "SecOps Enterprise 2026",
+    original_text: "AuraCloud provides defense-in-depth isolation across distributed clusters. With FIPS 140-3 validated AES-256-GCM encryption and automated mTLS 1.3 service mesh controls, our infrastructure delivers certified data residency.",
+    current_text: "AuraCloud provides defense-in-depth isolation across distributed clusters. With FIPS 140-3 validated AES-256-GCM encryption and automated mTLS 1.3 service mesh controls, our infrastructure delivers certified data residency.",
+    status: "approved",
+    word_count: 31,
+    character_count: 228,
+    compliance_score: 100,
+    creator_id: "user-creator-1",
+    creator_name: "Marcus Vance",
+    created_at: "2026-11-18T15:00:00Z",
+    updated_at: "2026-11-18T16:20:00Z",
+    findings_count: 0,
+    critical_count: 0
+  },
+  {
+    id: "sub-pricing-brief",
+    organization_id: "org-auracloud-001",
+    title: "AuraCloud Q4 Pricing & Node Expansion Brief",
+    content_type: "marketing_copy",
+    target_platform: "Sales Enablement & Customer Portal",
+    associated_product: "AuraCloud Professional",
+    campaign_name: "Q4 Customer Acquisition",
+    original_text: "Deploy managed nodes with our lowest cost guarantee. AuraCloud Professional starts at $49 per node with infinite horizontal autoscaling.",
+    current_text: "Deploy managed nodes with our lowest cost guarantee. AuraCloud Professional starts at $49 per node with infinite horizontal autoscaling.",
+    status: "changes_requested",
+    word_count: 21,
+    character_count: 147,
+    compliance_score: 74,
+    creator_id: "user-creator-1",
+    creator_name: "Marcus Vance",
+    created_at: "2026-11-18T16:45:00Z",
+    updated_at: "2026-11-18T17:10:00Z",
+    findings_count: 2,
+    critical_count: 1
+  }
+];
 
-export const INITIAL_FINDINGS: Record<string, ComplianceFinding[]> = {};
+export const INITIAL_FINDINGS: Record<string, ComplianceFinding[]> = {
+  "sub-q4-launch": [
+    {
+      id: "find-001",
+      submission_id: "sub-q4-launch",
+      category: "unsupported_claim",
+      severity: "high",
+      original_text: "India's No. 1",
+      start_index: 45,
+      end_index: 58,
+      explanation: "Unsupported market leadership ranking. Market position claims must cite dated third-party analyst recognition (e.g. Gartner, IDC).",
+      relevant_brand_rule: "Factual Claims Policy 4.2: Prohibited Market Superlatives",
+      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
+      page_reference: "Page 22, Section 4.2",
+      exact_supporting_passage: "Section 4.2: Factual Claims Policy: Unsubstantiated market leadership claims ('No. 1', 'cheapest') expose the company to regulatory censure and are prohibited.",
+      suggested_correction: "a leading enterprise cloud platform",
+      confidence: 0.98,
+      status: "pending"
+    },
+    {
+      id: "find-002",
+      submission_id: "sub-q4-launch",
+      category: "terminology",
+      severity: "high",
+      original_text: "AI magic",
+      start_index: 93,
+      end_index: 101,
+      explanation: "The phrase 'AI magic' is explicitly prohibited. It trivializes enterprise software engineering and violates brand voice standards.",
+      relevant_brand_rule: "Terminology Policy: Prohibited Term 'AI magic'",
+      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
+      page_reference: "Page 15, Section 3.4",
+      exact_supporting_passage: "Section 3.4: Nomenclature Rules: Never refer to our capabilities as 'AI magic'. Use 'automated cloud orchestration' or 'predictive optimization'.",
+      suggested_correction: "intelligent automated orchestration",
+      confidence: 1.0,
+      status: "pending"
+    },
+    {
+      id: "find-003",
+      submission_id: "sub-q4-launch",
+      category: "unsupported_claim",
+      severity: "critical",
+      original_text: "guarantees 100% accuracy",
+      start_index: 102,
+      end_index: 126,
+      explanation: "Absolute performance guarantee. Legally prohibited under our compliance guidelines without qualified warranty limits and SLA bounds.",
+      relevant_brand_rule: "Legal Compliance Standard: Prohibited Absolute Guarantees",
+      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
+      page_reference: "Page 22, Section 4.2",
+      exact_supporting_passage: "Section 4.2: Never state absolute guarantees, unsupported rankings, or exaggerated superlatives. All product descriptions must reflect verifiable specifications.",
+      suggested_correction: "delivers high-reliability automated verification",
+      confidence: 0.99,
+      status: "pending"
+    },
+    {
+      id: "find-004",
+      submission_id: "sub-q4-launch",
+      category: "unsupported_claim",
+      severity: "critical",
+      original_text: "cheapest solution available",
+      start_index: 138,
+      end_index: 165,
+      explanation: "Unsubstantiated comparative pricing claim. Price superlatives require a defined competitor benchmark and active pricing audit.",
+      relevant_brand_rule: "Factual Claims Policy 4.2: Comparative Pricing",
+      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
+      page_reference: "Page 22, Section 4.2",
+      exact_supporting_passage: "Section 4.2: Comparative pricing claims ('cheapest') without published competitive benchmarking invite regulatory scrutiny.",
+      suggested_correction: "cost-effective enterprise solution",
+      confidence: 0.97,
+      status: "pending"
+    },
+    {
+      id: "find-005",
+      submission_id: "sub-q4-launch",
+      category: "terminology",
+      severity: "medium",
+      original_text: "auracloud",
+      start_index: 226,
+      end_index: 235,
+      explanation: "Incorrect brand capitalization. AuraCloud must always be capitalized with capital 'A' and capital 'C'.",
+      relevant_brand_rule: "Brand Nomenclature Policy 3.4: Capitalization Standard",
+      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
+      page_reference: "Page 15, Section 3.4",
+      exact_supporting_passage: "Section 3.4: Nomenclature Rules: AuraCloud must always appear in camel-case. Derivatives such as 'auracloud' are prohibited.",
+      suggested_correction: "AuraCloud",
+      confidence: 1.0,
+      status: "pending"
+    }
+  ],
+  "sub-pricing-brief": [
+    {
+      id: "find-pb-01",
+      submission_id: "sub-pricing-brief",
+      category: "unsupported_claim",
+      severity: "critical",
+      original_text: "lowest cost guarantee",
+      start_index: 31,
+      end_index: 52,
+      explanation: "Comparative guarantee without signed executive price book exception.",
+      relevant_brand_rule: "Factual Claims Policy 4.2: Comparative Pricing",
+      source_document: "AuraCloud Global Brand & Communication Manual v2.4",
+      page_reference: "Page 22, Section 4.2",
+      exact_supporting_passage: "Section 4.2: Pricing claims must reflect premium enterprise positioning rather than commodity discounting.",
+      suggested_correction: "transparent enterprise pricing",
+      confidence: 0.96,
+      status: "pending"
+    },
+    {
+      id: "find-pb-02",
+      submission_id: "sub-pricing-brief",
+      category: "unsupported_claim",
+      severity: "high",
+      original_text: "infinite horizontal autoscaling",
+      start_index: 104,
+      end_index: 137,
+      explanation: "Unbounded scalability claim lacks verified engineering threshold.",
+      relevant_brand_rule: "Architecture Scale Standard 3.1: Horizontal Autoscaling Bounds",
+      source_document: "AuraCloud Enterprise Architecture v3.0",
+      page_reference: "Section 3.1",
+      exact_supporting_passage: "Unbounded scalability claims lack engineering veracity. Cite verified load-test thresholds.",
+      suggested_correction: "elastic horizontal autoscaling supporting 1M+ concurrent RPS",
+      confidence: 0.98,
+      status: "pending"
+    }
+  ]
+};
 
-export const INITIAL_NOTIFICATIONS: Notification[] = [];
+export const INITIAL_REVISIONS: Record<string, ContentRevision[]> = {
+  "sub-q4-launch": [
+    {
+      id: "rev-q4-1",
+      submission_id: "sub-q4-launch",
+      version_number: 1.0,
+      content_text: "We are thrilled to announce that AuraCloud is India's No. 1 AI cloud company. Our revolutionary AI magic guarantees 100% accuracy and is the cheapest solution available on the market today. Join thousands of developers who trust auracloud without hesitation.",
+      change_summary: "Initial draft ingested from PR Newswire campaign staging.",
+      author_name: "Marcus Vance",
+      compliance_score: 34,
+      timestamp: "2026-11-18T17:30:00Z"
+    },
+    {
+      id: "rev-q4-2",
+      submission_id: "sub-q4-launch",
+      version_number: 1.1,
+      content_text: "We are thrilled to announce that AuraCloud is a leading enterprise cloud platform. Our intelligent automated orchestration delivers high-reliability automated verification and is a cost-effective enterprise solution available on the market today. Join thousands of developers who trust AuraCloud without hesitation.",
+      change_summary: "Applied 5 AI studio corrections: replaced market superlatives, unverified accuracy guarantees, and corrected camelCase brand naming.",
+      author_name: "Marcus Vance",
+      compliance_score: 98,
+      timestamp: "2026-11-18T18:15:00Z"
+    },
+    {
+      id: "rev-q4-3",
+      submission_id: "sub-q4-launch",
+      version_number: 1.2,
+      content_text: "We are thrilled to announce that AuraCloud is a leading enterprise cloud platform. Our intelligent automated orchestration delivers high-reliability automated verification with 99.95% monthly uptime SLA backing and is a cost-effective enterprise solution. Join thousands of enterprise engineers who trust AuraCloud without hesitation.",
+      change_summary: "Added SLA commitment citation and routed to Human Approval Centre for reviewer sign-off.",
+      author_name: "Sarah Lin",
+      compliance_score: 100,
+      timestamp: "2026-11-18T18:45:00Z"
+    }
+  ]
+};
+
+export const INITIAL_APPROVAL_RECORDS: ApprovalRecord[] = [
+  {
+    id: "appr-rec-001",
+    submission_id: "sub-security-whitepaper",
+    submission_title: "AuraCloud Zero-Trust Architecture Whitepaper",
+    reviewer_id: "user-reviewer-1",
+    reviewer_name: "Sarah Lin",
+    decision: "approved",
+    comments: "Verified all cryptographic assertions against FIPS 140-3 standards. No absolute superlatives found. Formally approved for global dissemination.",
+    content_version: 2.0,
+    timestamp: "2026-11-18T16:20:00Z",
+    cryptographic_stamp: "AUTH-APP-9B4A-7X92-2026"
+  },
+  {
+    id: "appr-rec-002",
+    submission_id: "sub-pricing-brief",
+    submission_title: "AuraCloud Q4 Pricing & Node Expansion Brief",
+    reviewer_id: "user-reviewer-1",
+    reviewer_name: "Sarah Lin",
+    decision: "changes_requested",
+    comments: "Please remove the phrase 'lowest cost guarantee' on page 3. Cite the exact $49/node tier price schedule from Approved Fact #4 instead.",
+    content_version: 1.1,
+    timestamp: "2026-11-18T17:10:00Z",
+    cryptographic_stamp: "AUTH-CHG-5E82-3A19-2026"
+  }
+];
+
+export const INITIAL_ACTIVITIES: ActivityItem[] = [
+  {
+    id: "act-001",
+    type: "audit",
+    title: "Document Ingestion & AI Audit",
+    description: "Audited 'Q4 Enterprise Cloud Infrastructure Announcement'. 5 source-grounded findings flagged (34% compliance score).",
+    actor_name: "Marcus Vance",
+    actor_role: "creator",
+    target_link: "/app/corrections/sub-q4-launch",
+    timestamp: "15 minutes ago",
+    status_badge: "34% Score"
+  },
+  {
+    id: "act-002",
+    type: "correction",
+    title: "Lexical Replacements Applied",
+    description: "Corrected 'AI magic' to 'intelligent automated orchestration' and fixed brand camelCase.",
+    actor_name: "Marcus Vance",
+    actor_role: "creator",
+    target_link: "/app/corrections/sub-q4-launch",
+    timestamp: "25 minutes ago",
+    status_badge: "5 Fixes"
+  },
+  {
+    id: "act-003",
+    type: "approval",
+    title: "Draft Routed for Approval",
+    description: "Marcus Vance requested brand manager evaluation on 'Q4 Enterprise Cloud Announcement'.",
+    actor_name: "Marcus Vance",
+    actor_role: "creator",
+    target_link: "/app/approvals",
+    timestamp: "40 minutes ago",
+    status_badge: "In Review"
+  },
+  {
+    id: "act-004",
+    type: "approval",
+    title: "Release Authorization Stamped",
+    description: "Sarah Lin granted cryptographic publication sign-off for 'Zero-Trust Architecture Whitepaper'.",
+    actor_name: "Sarah Lin",
+    actor_role: "reviewer",
+    target_link: "/app/approvals",
+    timestamp: "2 hours ago",
+    status_badge: "Approved"
+  },
+  {
+    id: "act-005",
+    type: "policy",
+    title: "Brand Rule Indexed",
+    description: "Updated prohibited rule for '100% accuracy' under Legal Compliance Standard Section 4.2.",
+    actor_name: "Ruben John Reji",
+    actor_role: "admin",
+    target_link: "/app/knowledge?tab=terminology",
+    timestamp: "4 hours ago",
+    status_badge: "Rule Updated"
+  }
+];
+
+export const INITIAL_NOTIFICATIONS: Notification[] = [
+  {
+    id: "notif-init-audit-1",
+    organization_id: "org-auracloud-001",
+    user_id: "user-creator-1",
+    title: "Audit Findings Flagged",
+    message: "Q4 Enterprise Cloud Infrastructure Announcement was audited. 5 source-backed findings require review in the studio.",
+    notification_type: "audit_completed",
+    link: "/app/corrections/sub-q4-launch",
+    is_read: false,
+    created_at: "2026-11-18T18:05:00Z"
+  },
+  {
+    id: "notif-init-audit-2",
+    organization_id: "org-auracloud-001",
+    user_id: "user-admin-1",
+    title: "New Draft Ingested",
+    message: "Marcus Vance audited 'Q4 Enterprise Cloud Infrastructure Announcement'. 5 brand policy discrepancies detected.",
+    notification_type: "audit_completed",
+    link: "/app/corrections/sub-q4-launch",
+    is_read: false,
+    created_at: "2026-11-18T18:05:00Z"
+  }
+];
 

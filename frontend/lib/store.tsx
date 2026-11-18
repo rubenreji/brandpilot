@@ -14,7 +14,10 @@ import {
   UserRole,
   UserProfile,
   AnalyticsSummary,
-  AuditResultResponse
+  AuditResultResponse,
+  ContentRevision,
+  ApprovalRecord,
+  ActivityItem
 } from './types';
 import {
   DEMO_WORKSPACE,
@@ -27,7 +30,10 @@ import {
   INITIAL_SUBMISSIONS,
   INITIAL_FINDINGS,
   INITIAL_NOTIFICATIONS,
-  INITIAL_USERS
+  INITIAL_USERS,
+  INITIAL_REVISIONS,
+  INITIAL_APPROVAL_RECORDS,
+  INITIAL_ACTIVITIES
 } from './demo_data';
 import { BrandPilotAPI } from './api';
 import { supabase, isSupabaseConfigured, testSupabaseConnection } from './supabase';
@@ -73,10 +79,12 @@ interface BrandPilotContextType {
 
   facts: ApprovedFact[];
   addFact: (fact: Omit<ApprovedFact, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => Promise<void>;
+  updateFact: (id: string, updates: Partial<ApprovedFact>) => Promise<void>;
   deleteFact: (id: string) => Promise<void>;
 
   terminology: TerminologyRule[];
   addTerminologyRule: (rule: Omit<TerminologyRule, 'id' | 'created_at' | 'organization_id'>) => Promise<void>;
+  updateTerminologyRule: (id: string, updates: Partial<TerminologyRule>) => Promise<void>;
   deleteTerminologyRule: (id: string) => Promise<void>;
 
   toneProfile: ToneProfile;
@@ -88,6 +96,10 @@ interface BrandPilotContextType {
   // Submissions & Audits
   submissions: ContentSubmission[];
   findings: Record<string, ComplianceFinding[]>;
+  revisions: Record<string, ContentRevision[]>;
+  approvalHistory: ApprovalRecord[];
+  activities: ActivityItem[];
+  addActivity: (activity: Omit<ActivityItem, 'id'>) => void;
   getSubmission: (id: string) => ContentSubmission | undefined;
   getSubmissionFindings: (id: string) => ComplianceFinding[];
   runAudit: (data: {
@@ -233,27 +245,30 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
 
   const [assets, setAssets] = useState<BrandAsset[]>(INITIAL_ASSETS);
 
-  // Reset check for fresh hackathon baseline: start tracking from first user action
-  const isResetDone = () => {
+  // Seed flag for single document audit baseline
+  const isSingleDocSeeded = () => {
     if (typeof window === 'undefined') return true;
-    return localStorage.getItem('brandpilot_trackers_reset_v3') === 'true';
+    return localStorage.getItem('brandpilot_single_doc_v1') === 'true';
   };
 
   // Submissions & Findings with persistence across page navigation and refresh
   const [submissions, setSubmissions] = useState<ContentSubmission[]>(() => {
     if (typeof window !== 'undefined') {
-      if (!isResetDone()) {
+      if (!isSingleDocSeeded()) {
         try {
-          localStorage.removeItem('brandpilot_submissions');
-          localStorage.removeItem('brandpilot_findings');
-          localStorage.removeItem('brandpilot_notifications');
-          localStorage.setItem('brandpilot_trackers_reset_v3', 'true');
+          localStorage.setItem('brandpilot_submissions', JSON.stringify(INITIAL_SUBMISSIONS));
+          localStorage.setItem('brandpilot_findings', JSON.stringify(INITIAL_FINDINGS));
+          localStorage.setItem('brandpilot_notifications', JSON.stringify(INITIAL_NOTIFICATIONS));
+          localStorage.setItem('brandpilot_single_doc_v1', 'true');
         } catch {}
-        return [];
+        return INITIAL_SUBMISSIONS;
       }
       try {
         const stored = localStorage.getItem('brandpilot_submissions');
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       } catch {}
     }
     return INITIAL_SUBMISSIONS;
@@ -261,10 +276,12 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
 
   const [findings, setFindings] = useState<Record<string, ComplianceFinding[]>>(() => {
     if (typeof window !== 'undefined') {
-      if (!isResetDone()) return {};
       try {
         const stored = localStorage.getItem('brandpilot_findings');
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && Object.keys(parsed).length > 0) return parsed;
+        }
       } catch {}
     }
     return INITIAL_FINDINGS;
@@ -272,29 +289,81 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
 
   const [notifications, setNotifications] = useState<Notification[]>(() => {
     if (typeof window !== 'undefined') {
-      if (!isResetDone()) return [];
       try {
         const stored = localStorage.getItem('brandpilot_notifications');
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       } catch {}
     }
     return INITIAL_NOTIFICATIONS;
   });
+
+  const [revisions, setRevisions] = useState<Record<string, ContentRevision[]>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_revisions');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && Object.keys(parsed).length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return INITIAL_REVISIONS;
+  });
+
+  const [approvalHistory, setApprovalHistory] = useState<ApprovalRecord[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_approvals');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return INITIAL_APPROVAL_RECORDS;
+  });
+
+  const [activities, setActivities] = useState<ActivityItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('brandpilot_activities');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return INITIAL_ACTIVITIES;
+  });
+
+  const addActivity = (act: Omit<ActivityItem, 'id'>) => {
+    const item: ActivityItem = { ...act, id: `act-${Date.now()}` };
+    setActivities(prev => [item, ...prev]);
+  };
 
   // Dedicated manual tracker reset: wipes all logs and resumes tracking from first new action
   const resetAllTrackers = () => {
     setSubmissions([]);
     setFindings({});
     setNotifications([]);
+    setApprovalHistory([]);
+    setActivities([]);
+    setRevisions({});
     if (typeof window !== 'undefined') {
       try {
-        localStorage.removeItem('brandpilot_submissions');
-        localStorage.removeItem('brandpilot_findings');
-        localStorage.removeItem('brandpilot_notifications');
-        localStorage.setItem('brandpilot_trackers_reset_v3', 'true');
+        localStorage.setItem('brandpilot_submissions', JSON.stringify([]));
+        localStorage.setItem('brandpilot_findings', JSON.stringify({}));
+        localStorage.setItem('brandpilot_notifications', JSON.stringify([]));
+        localStorage.setItem('brandpilot_approvals', JSON.stringify([]));
+        localStorage.setItem('brandpilot_activities', JSON.stringify([]));
+        localStorage.setItem('brandpilot_revisions', JSON.stringify({}));
+        localStorage.setItem('brandpilot_single_doc_v1', 'true');
       } catch {}
     }
-    showToast('All trackers and audit logs reset. Tracking will start from your next action!', 'info');
+    showToast('All trackers and audit logs reset to zero. Tracking will start from your next action!', 'info');
   };
 
   // Auto-sync state to localStorage for true enterprise persistence
@@ -308,9 +377,12 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         localStorage.setItem('brandpilot_submissions', JSON.stringify(submissions));
         localStorage.setItem('brandpilot_findings', JSON.stringify(findings));
         localStorage.setItem('brandpilot_notifications', JSON.stringify(notifications));
+        localStorage.setItem('brandpilot_approvals', JSON.stringify(approvalHistory));
+        localStorage.setItem('brandpilot_activities', JSON.stringify(activities));
+        localStorage.setItem('brandpilot_revisions', JSON.stringify(revisions));
       } catch {}
     }
-  }, [guidelines, facts, terminology, toneProfile, submissions, findings, notifications]);
+  }, [guidelines, facts, terminology, toneProfile, submissions, findings, notifications, approvalHistory, activities, revisions]);
 
   // Toast notification queue
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -591,6 +663,23 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     await BrandPilotAPI.deleteFact(currentWorkspace.id, id);
   };
 
+  const updateFact = async (id: string, updates: Partial<ApprovedFact>) => {
+    setFacts(prev =>
+      prev.map(f => (f.id === id ? { ...f, ...updates, updated_at: new Date().toISOString() } : f))
+    );
+    addActivity({
+      type: 'policy',
+      title: 'Approved Fact Updated',
+      description: `Updated approved fact: "${(updates.claim_text || updates.approved_statement || 'Fact').slice(0, 45)}..."`,
+      actor_name: currentUser.full_name || currentUser.name,
+      actor_role: currentRole,
+      target_link: '/app/knowledge?tab=facts',
+      timestamp: 'Just now',
+      status_badge: 'Fact Updated'
+    });
+    showToast('Approved fact updated successfully!', 'success');
+  };
+
   // Terminology actions
   const addTerminologyRule = async (ruleData: Omit<TerminologyRule, 'id' | 'created_at' | 'organization_id'>) => {
     const newRule: TerminologyRule = {
@@ -633,6 +722,23 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     }
 
     await BrandPilotAPI.deleteTerminologyRule(currentWorkspace.id, id);
+  };
+
+  const updateTerminologyRule = async (id: string, updates: Partial<TerminologyRule>) => {
+    setTerminology(prev =>
+      prev.map(r => (r.id === id ? { ...r, ...updates } : r))
+    );
+    addActivity({
+      type: 'policy',
+      title: 'Terminology Rule Modified',
+      description: `Modified terminology rule for term: "${updates.term || 'rule'}"`,
+      actor_name: currentUser.full_name || currentUser.name,
+      actor_role: currentRole,
+      target_link: '/app/knowledge?tab=terminology',
+      timestamp: 'Just now',
+      status_badge: 'Rule Modified'
+    });
+    showToast('Terminology governance rule updated!', 'success');
   };
 
   // Tone profile actions
@@ -1097,6 +1203,36 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
       [submissionId]: subFindings.map(f => (f.id === findingId ? { ...f, status: 'accepted' as const } : f))
     }));
 
+    setRevisions(prev => {
+      const existing = prev[submissionId] || [];
+      const nextVer = Number((1.0 + existing.length * 0.1).toFixed(1));
+      const newRev: ContentRevision = {
+        id: `rev-${Date.now()}`,
+        submission_id: submissionId,
+        version_number: nextVer,
+        content_text: updatedText,
+        change_summary: customText !== undefined ? `Custom replacement: "${customText}"` : `Applied suggested correction for "${targetFinding.original_text}"`,
+        author_name: currentUser.full_name || currentUser.name,
+        compliance_score: newScore,
+        timestamp: new Date().toISOString()
+      };
+      return {
+        ...prev,
+        [submissionId]: [newRev, ...existing]
+      };
+    });
+
+    addActivity({
+      type: 'correction',
+      title: 'Lexical Correction Accepted',
+      description: `Applied fix "${replacement}" in "${sub.title}". Score rose to ${newScore}%.`,
+      actor_name: currentUser.full_name || currentUser.name,
+      actor_role: currentRole,
+      target_link: `/app/corrections/${submissionId}`,
+      timestamp: 'Just now',
+      status_badge: `${newScore}% Score`
+    });
+
     showToast(`Correction applied! Compliance score rose to ${newScore}%.`, 'success');
     await BrandPilotAPI.applySuggestion(findingId, { custom_text: replacement, accepted: true });
   };
@@ -1108,6 +1244,7 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     if (!sub || subFindings.length === 0) return;
 
     let updatedText = sub.current_text;
+    const pendingCount = subFindings.filter(f => f.status === 'pending').length;
     const updatedFindings = subFindings.map(f => {
       if (f.status === 'pending') {
         const escaped = f.original_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1138,6 +1275,36 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
       ...prev,
       [submissionId]: updatedFindings
     }));
+
+    setRevisions(prev => {
+      const existing = prev[submissionId] || [];
+      const nextVer = Number((1.0 + existing.length * 0.1).toFixed(1));
+      const newRev: ContentRevision = {
+        id: `rev-${Date.now()}`,
+        submission_id: submissionId,
+        version_number: nextVer,
+        content_text: updatedText,
+        change_summary: `Applied all ${pendingCount} AI source-grounded suggestions.`,
+        author_name: currentUser.full_name || currentUser.name,
+        compliance_score: 100,
+        timestamp: new Date().toISOString()
+      };
+      return {
+        ...prev,
+        [submissionId]: [newRev, ...existing]
+      };
+    });
+
+    addActivity({
+      type: 'correction',
+      title: 'All Policy Fixes Accepted',
+      description: `Applied ${pendingCount} automated corrections across "${sub.title}". Score reached 100%.`,
+      actor_name: currentUser.full_name || currentUser.name,
+      actor_role: currentRole,
+      target_link: `/app/corrections/${submissionId}`,
+      timestamp: 'Just now',
+      status_badge: '100% Score'
+    });
 
     showToast('Applied all suggested corrections! Compliance score reached 100%.', 'success');
   };
@@ -1172,8 +1339,19 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
       created_at: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
-    showToast('Draft routed to Human Approval Centre for reviewer evaluation.', 'success');
 
+    addActivity({
+      type: 'approval',
+      title: 'Draft Routed for Review',
+      description: `${currentUser.full_name || currentUser.name} requested sign-off for "${sub?.title || 'Draft'}".`,
+      actor_name: currentUser.full_name || currentUser.name,
+      actor_role: currentRole,
+      target_link: '/app/approvals',
+      timestamp: 'Just now',
+      status_badge: 'In Review'
+    });
+
+    showToast('Draft routed to Human Approval Centre for reviewer evaluation.', 'success');
     await BrandPilotAPI.submitForApproval(submissionId, { note });
   };
 
@@ -1214,6 +1392,32 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
       created_at: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
+
+    const stamp = `AUTH-${decision === 'approved' ? 'APP' : 'REV'}-${submissionId.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+    const newApprovalRecord: ApprovalRecord = {
+      id: `appr-${Date.now()}`,
+      submission_id: submissionId,
+      submission_title: sub?.title || 'Audited Content',
+      reviewer_id: currentUser.id,
+      reviewer_name: currentUser.full_name || currentUser.name,
+      decision,
+      comments: comments || (decision === 'approved' ? 'Verified all claims against corporate guidelines. Formally approved.' : 'Revisions requested before release.'),
+      content_version: 2.0,
+      timestamp: new Date().toISOString(),
+      cryptographic_stamp: stamp
+    };
+    setApprovalHistory(prev => [newApprovalRecord, ...prev]);
+
+    addActivity({
+      type: 'approval',
+      title: decision === 'approved' ? 'Release Sign-Off Granted' : decision === 'changes_requested' ? 'Changes Requested' : 'Submission Rejected',
+      description: `"${sub?.title || 'Draft'}" was ${decision.replace('_', ' ')} by ${currentUser.full_name || currentUser.name}.`,
+      actor_name: currentUser.full_name || currentUser.name,
+      actor_role: currentRole,
+      target_link: '/app/approvals',
+      timestamp: 'Just now',
+      status_badge: decision === 'approved' ? 'Approved' : decision === 'changes_requested' ? 'Changes Req.' : 'Rejected'
+    });
 
     if (decision === 'approved') {
       showToast('Document approved with digital cryptographic audit stamp!', 'success');
@@ -1266,9 +1470,11 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         addGuideline,
         facts,
         addFact,
+        updateFact,
         deleteFact,
         terminology,
         addTerminologyRule,
+        updateTerminologyRule,
         deleteTerminologyRule,
         toneProfile,
         updateToneProfile,
@@ -1276,6 +1482,10 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         addAsset,
         submissions,
         findings,
+        revisions,
+        approvalHistory,
+        activities,
+        addActivity,
         getSubmission,
         getSubmissionFindings,
         analyzeTextRealtime,

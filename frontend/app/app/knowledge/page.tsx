@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useBrandPilot } from '@/lib/store';
+import { ApprovedFact, TerminologyRule } from '@/lib/types';
 import {
   BookOpen,
   FileCheck2,
@@ -21,7 +22,8 @@ import {
   Upload,
   X,
   Layers,
-  FileText
+  FileText,
+  Edit3
 } from 'lucide-react';
 
 export default function KnowledgeBasePage() {
@@ -39,9 +41,11 @@ export default function KnowledgeBasePage() {
     addGuideline,
     facts,
     addFact,
+    updateFact,
     deleteFact,
     terminology,
     addTerminologyRule,
+    updateTerminologyRule,
     deleteTerminologyRule,
     toneProfile,
     updateToneProfile,
@@ -63,6 +67,11 @@ export default function KnowledgeBasePage() {
     text: ''
   });
   const [inspectingDoc, setInspectingDoc] = useState<(typeof guidelines)[0] | null>(null);
+  const [viewingFullDoc, setViewingFullDoc] = useState<(typeof guidelines)[0] | null>(null);
+
+  // Edit Modals state
+  const [editingFact, setEditingFact] = useState<ApprovedFact | null>(null);
+  const [editingTerm, setEditingTerm] = useState<TerminologyRule | null>(null);
 
   // Add Fact Modal state
   const [isFactModalOpen, setIsFactModalOpen] = useState(false);
@@ -352,14 +361,24 @@ export default function KnowledgeBasePage() {
                   <div className="text-[10px] text-zinc-500 font-mono">Embedding: [0.042, -0.198, 0.812, ... 1536 dim]</div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 text-xs text-zinc-400 border-t border-emerald-950">
+                <div className="flex items-center justify-between pt-2 text-xs text-zinc-400 border-t border-emerald-950 flex-wrap gap-2">
                   <span>Last synced: {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : 'Active Q1 2026'}</span>
-                  <button
-                    onClick={() => setInspectingDoc(doc)}
-                    className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer"
-                  >
-                    Inspect Vector Chunks <ExternalLink className="w-3 h-3" />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setViewingFullDoc(doc)}
+                      className="text-zinc-300 hover:text-white font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Read Full Text</span>
+                    </button>
+                    <button
+                      onClick={() => setInspectingDoc(doc)}
+                      className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Vector Chunks</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -442,13 +461,24 @@ export default function KnowledgeBasePage() {
                       </td>
                       {currentRole !== 'creator' && (
                         <td className="py-3.5 px-4 text-right">
-                          <button
-                            onClick={() => deleteFact(fact.id)}
-                            className="p-1.5 text-zinc-500 hover:text-rose-400 rounded hover:bg-rose-950/40 transition-colors cursor-pointer"
-                            title="Delete Fact"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setEditingFact(fact)}
+                              className="p-1.5 text-zinc-400 hover:text-emerald-400 rounded hover:bg-emerald-950/40 transition-colors cursor-pointer"
+                              title="Edit Approved Fact"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteFact(fact.id)}
+                              className="p-1.5 text-zinc-500 hover:text-rose-400 rounded hover:bg-rose-950/40 transition-colors cursor-pointer"
+                              title="Delete Fact"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -531,10 +561,18 @@ export default function KnowledgeBasePage() {
                 </div>
 
                 {currentRole !== 'creator' && (
-                  <div className="mt-4 pt-3 border-t border-emerald-950 flex items-center justify-end">
+                  <div className="mt-4 pt-3 border-t border-emerald-950 flex items-center justify-end gap-2">
                     <button
+                      type="button"
+                      onClick={() => setEditingTerm(term)}
+                      className="px-2.5 py-1 text-xs text-emerald-400 hover:text-emerald-300 font-bold rounded bg-[#060B08] border border-emerald-950 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Edit3 className="w-3 h-3" /> Edit Rule
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => deleteTerminologyRule(term.id)}
-                      className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-medium cursor-pointer"
+                      className="px-2.5 py-1 text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-medium cursor-pointer rounded hover:bg-rose-950/40 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" /> Remove
                     </button>
@@ -1154,6 +1192,211 @@ export default function KnowledgeBasePage() {
                   className="px-4 py-2 bg-emerald-500 text-black text-xs font-extrabold rounded-lg hover:bg-emerald-400 shadow-md cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.35)]"
                 >
                   Save Token
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: View Full Document Text */}
+      {viewingFullDoc && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0A120E] rounded-2xl max-w-3xl w-full shadow-2xl border border-emerald-900/80 max-h-[85vh] my-auto flex flex-col overflow-hidden animate-scale-in text-zinc-100">
+            <div className="shrink-0 p-5 border-b border-emerald-950 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="text-base font-bold text-white">{viewingFullDoc.title}</h3>
+                  <p className="text-xs text-zinc-400">{viewingFullDoc.file_name || 'Brand Manual'} • {viewingFullDoc.category}</p>
+                </div>
+              </div>
+              <button onClick={() => setViewingFullDoc(null)} className="text-zinc-400 hover:text-white cursor-pointer p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 text-sm font-sans leading-relaxed text-zinc-300 whitespace-pre-wrap bg-[#050806] space-y-4">
+              <div className="p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-xl text-xs text-emerald-300 font-mono">
+                Status: Active Indexed Source of Truth • pgvector HNSW Index Ready
+              </div>
+              <p>{viewingFullDoc.extracted_text || 'Full corporate communication and architecture standards text indexed in PostgreSQL pgvector semantic store.'}</p>
+            </div>
+            <div className="shrink-0 p-4 border-t border-emerald-950 bg-[#060B08] flex justify-end">
+              <button
+                onClick={() => setViewingFullDoc(null)}
+                className="px-4 py-2 bg-emerald-500 text-black text-xs font-extrabold rounded-lg hover:bg-emerald-400 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+              >
+                Close Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Approved Fact */}
+      {editingFact && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0A120E] rounded-2xl max-w-lg w-full shadow-2xl border border-emerald-900/80 max-h-[85vh] my-auto flex flex-col overflow-hidden animate-scale-in text-zinc-100">
+            <div className="shrink-0 p-5 border-b border-emerald-950 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-base font-extrabold text-white">Edit Approved Corporate Fact</h3>
+              </div>
+              <button onClick={() => setEditingFact(null)} className="text-zinc-400 hover:text-white cursor-pointer p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                if (!editingFact) return;
+                await updateFact(editingFact.id, {
+                  claim_text: editingFact.claim_text,
+                  approved_statement: editingFact.claim_text,
+                  category: editingFact.category,
+                  source_citation: editingFact.source_citation || editingFact.supporting_evidence
+                });
+                setEditingFact(null);
+              }}
+              className="flex flex-col flex-1 overflow-hidden"
+            >
+              <div className="overflow-y-auto p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300">Approved Fact / Statement</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={editingFact.claim_text || editingFact.approved_statement || ''}
+                    onChange={e => setEditingFact({ ...editingFact, claim_text: e.target.value, approved_statement: e.target.value })}
+                    className="mt-1 w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-[#050806] text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300">Category</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingFact.category}
+                    onChange={e => setEditingFact({ ...editingFact, category: e.target.value })}
+                    className="mt-1 w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg bg-[#050806] text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300">Supporting Evidence / Source Citation</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingFact.source_citation || editingFact.supporting_evidence || ''}
+                    onChange={e => setEditingFact({ ...editingFact, source_citation: e.target.value, supporting_evidence: e.target.value })}
+                    className="mt-1 w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg bg-[#050806] text-white"
+                  />
+                </div>
+              </div>
+              <div className="shrink-0 p-4 border-t border-emerald-950 bg-[#060B08] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingFact(null)}
+                  className="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-500 text-black text-xs font-extrabold rounded-lg hover:bg-emerald-400 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                >
+                  Save Fact Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Terminology Rule */}
+      {editingTerm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#0A120E] rounded-2xl max-w-lg w-full shadow-2xl border border-emerald-900/80 max-h-[85vh] my-auto flex flex-col overflow-hidden animate-scale-in text-zinc-100">
+            <div className="shrink-0 p-5 border-b border-emerald-950 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-base font-extrabold text-white">Edit Brand Terminology Rule</h3>
+              </div>
+              <button onClick={() => setEditingTerm(null)} className="text-zinc-400 hover:text-white cursor-pointer p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                if (!editingTerm) return;
+                await updateTerminologyRule(editingTerm.id, {
+                  term: editingTerm.term,
+                  rule_type: editingTerm.rule_type,
+                  suggested_replacement: editingTerm.suggested_replacement || editingTerm.preferred_alternative,
+                  preferred_alternative: editingTerm.suggested_replacement || editingTerm.preferred_alternative,
+                  explanation: editingTerm.explanation || editingTerm.rule_description,
+                  rule_description: editingTerm.explanation || editingTerm.rule_description,
+                  is_case_sensitive: editingTerm.is_case_sensitive || editingTerm.case_sensitive
+                });
+                setEditingTerm(null);
+              }}
+              className="flex flex-col flex-1 overflow-hidden"
+            >
+              <div className="overflow-y-auto p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300">Target Term or Phrase</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTerm.term}
+                    onChange={e => setEditingTerm({ ...editingTerm, term: e.target.value })}
+                    className="mt-1 w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-[#050806] text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300">Rule Type</label>
+                  <select
+                    value={editingTerm.rule_type}
+                    onChange={e => setEditingTerm({ ...editingTerm, rule_type: e.target.value as any })}
+                    className="mt-1 w-full text-xs p-2 border border-emerald-900/60 rounded-lg bg-[#050806] text-white"
+                  >
+                    <option value="prohibited">Prohibited (Flags violation)</option>
+                    <option value="preferred">Preferred (Encouraged terminology)</option>
+                    <option value="required">Required Disclaimer / Clause</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300">Approved Alternative / Replacement</label>
+                  <input
+                    type="text"
+                    value={editingTerm.suggested_replacement || editingTerm.preferred_alternative || ''}
+                    onChange={e => setEditingTerm({ ...editingTerm, suggested_replacement: e.target.value, preferred_alternative: e.target.value })}
+                    className="mt-1 w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg bg-[#050806] text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300">Rule Description & Rationale</label>
+                  <textarea
+                    rows={3}
+                    value={editingTerm.explanation || editingTerm.rule_description || ''}
+                    onChange={e => setEditingTerm({ ...editingTerm, explanation: e.target.value, rule_description: e.target.value })}
+                    className="mt-1 w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg bg-[#050806] text-white"
+                  />
+                </div>
+              </div>
+              <div className="shrink-0 p-4 border-t border-emerald-950 bg-[#060B08] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTerm(null)}
+                  className="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-500 text-black text-xs font-extrabold rounded-lg hover:bg-emerald-400 cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                >
+                  Save Terminology Rule
                 </button>
               </div>
             </form>

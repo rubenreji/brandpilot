@@ -56,7 +56,7 @@ export default function CorrectionStudioPage() {
   const [activeFindingId, setActiveFindingId] = useState<string | null>(null);
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
   const [customReplacement, setCustomReplacement] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'annotated' | 'editor' | 'diff'>('annotated');
+  const [viewMode, setViewMode] = useState<'annotated' | 'side_by_side' | 'editor' | 'diff'>('side_by_side');
   const [manualText, setManualText] = useState(submission?.current_text || '');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [submissionNote, setSubmissionNote] = useState('');
@@ -497,7 +497,18 @@ ${submission.current_text}
         <div className="lg:col-span-7 bg-[#0A120E] rounded-2xl border border-emerald-900/60 p-6 shadow-lg space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-emerald-950 gap-2 flex-wrap">
             {/* View Mode Tabs */}
-            <div className="flex items-center gap-1.5 bg-[#050806] p-1 rounded-xl border border-emerald-950">
+            <div className="flex items-center gap-1.5 bg-[#050806] p-1 rounded-xl border border-emerald-950 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setViewMode('side_by_side')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  viewMode === 'side_by_side'
+                    ? 'bg-emerald-500 text-black font-extrabold shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Before / After Comparison
+              </button>
               <button
                 type="button"
                 onClick={() => setViewMode('annotated')}
@@ -549,7 +560,51 @@ ${submission.current_text}
             )}
           </div>
 
-          {viewMode === 'editor' ? (
+          {viewMode === 'side_by_side' ? (
+            <div className="space-y-4 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left: Before (Original Draft) */}
+                <div className="p-4 bg-[#060B08] border border-rose-900/60 rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center justify-between pb-2 border-b border-rose-950">
+                    <span className="flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                      Before (Pre-Audit Raw Copy)
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">
+                      v1.0 Ingestion
+                    </span>
+                  </div>
+                  <div className="text-xs text-zinc-300 font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
+                    {submission.original_text}
+                  </div>
+                  <div className="pt-2 border-t border-emerald-950/60 text-[10px] text-zinc-500 flex items-center justify-between">
+                    <span>{pendingFindings.length} unresolved issues</span>
+                    <span className="text-rose-400 font-bold">Score: 34%</span>
+                  </div>
+                </div>
+
+                {/* Right: After (Live Corrected Version) */}
+                <div className="p-4 bg-[#060B08] border border-emerald-800/80 rounded-xl space-y-2 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                  <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between pb-2 border-b border-emerald-950">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      After (Live Corrected Draft)
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-[#00FF87] border border-emerald-700">
+                      Current Live
+                    </span>
+                  </div>
+                  <div className="text-xs text-white font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
+                    {submission.current_text}
+                  </div>
+                  <div className="pt-2 border-t border-emerald-950/60 text-[10px] text-zinc-400 flex items-center justify-between">
+                    <span>{acceptedFindings.length} corrections applied</span>
+                    <span className="text-emerald-400 font-extrabold font-mono">Score: {submission.compliance_score}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : viewMode === 'editor' ? (
             <div className="space-y-3 animate-fade-in">
               <div className="flex items-center justify-between text-xs font-medium px-1">
                 <span className="flex items-center gap-2 text-emerald-400 font-semibold">
