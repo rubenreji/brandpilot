@@ -54,15 +54,18 @@ export function AppShell({ children }: AppShellProps) {
   // Review queue badge count
   const pendingApprovalsCount = submissions.filter(s => s.status === 'in_review' || s.status === 'pending_review').length;
 
+  // Latest active submission or fallback to demo
+  const latestSubmissionId = submissions && submissions.length > 0 ? submissions[0].id : 'sub-demo-flagged';
+
   const navItems = [
     { label: 'Dashboard', href: '/app/dashboard', icon: LayoutDashboard },
     { label: 'Brand Knowledge Base', href: '/app/knowledge', icon: BookOpen },
     { label: 'Content Auditing', href: '/app/audit', icon: FileCheck2 },
     {
       label: 'Correction Studio',
-      href: '/app/corrections/sub-demo-flagged',
+      href: `/app/corrections/${latestSubmissionId}`,
       icon: Sparkles,
-      badge: 'Live Demo'
+      badge: latestSubmissionId === 'sub-demo-flagged' ? 'Demo' : 'Active'
     },
     {
       label: 'Approval Centre',

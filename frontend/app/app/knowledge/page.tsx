@@ -232,6 +232,66 @@ export default function KnowledgeBasePage() {
         })}
       </div>
 
+      {/* Global Search & Quick Action Bar across Knowledge Base */}
+      <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder={`Search across ${activeTab} by name, keywords, or citations...`}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full text-xs pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-slate-800"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {activeTab === 'facts' && (
+            <select
+              value={factCategoryFilter}
+              onChange={e => setFactCategoryFilter(e.target.value)}
+              className="text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium cursor-pointer"
+            >
+              <option value="all">All Fact Categories</option>
+              <option value="product">Product & Specs</option>
+              <option value="sla">SLA & Reliability</option>
+              <option value="pricing">Pricing & Commercial</option>
+              <option value="compliance">Compliance & Legal</option>
+            </select>
+          )}
+          {currentRole !== 'creator' && activeTab !== 'tone' && (
+            <button
+              onClick={() => {
+                if (activeTab === 'guidelines') setIsGuidelineModalOpen(true);
+                else if (activeTab === 'facts') setIsFactModalOpen(true);
+                else if (activeTab === 'terminology') setIsTermModalOpen(true);
+                else if (activeTab === 'assets') setIsAssetModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-[#101827] hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5 text-blue-400" />
+              <span>
+                {activeTab === 'guidelines'
+                  ? 'Upload Manual'
+                  : activeTab === 'facts'
+                  ? 'Add Fact'
+                  : activeTab === 'terminology'
+                  ? 'Add Term'
+                  : 'Add Token'}
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* TAB 1: GUIDELINES & POLICY DOCUMENTS */}
       {activeTab === 'guidelines' && (
         <div className="space-y-6">
@@ -254,7 +314,14 @@ export default function KnowledgeBasePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {guidelines.map(doc => (
+            {guidelines
+              .filter(
+                doc =>
+                  !searchTerm ||
+                  doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (doc.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map(doc => (
               <div key={doc.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -286,7 +353,7 @@ export default function KnowledgeBasePage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-2 text-xs text-slate-500">
-                  <span>Last synced: {new Date(doc.updated_at || doc.uploaded_at || Date.now()).toLocaleDateString()}</span>
+                  <span>Last synced: {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : 'Active Q1 2026'}</span>
                   <button
                     onClick={() => setInspectingDoc(doc)}
                     className="text-blue-600 hover:underline font-semibold flex items-center gap-1"
@@ -414,7 +481,15 @@ export default function KnowledgeBasePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {terminology.map(term => (
+            {terminology
+              .filter(
+                term =>
+                  !searchTerm ||
+                  term.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (term.suggested_replacement || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (term.explanation || '').toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map(term => (
               <div
                 key={term.id}
                 className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between hover:border-blue-300 transition-colors"

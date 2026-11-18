@@ -15,7 +15,11 @@ import {
   Lock,
   UserCheck,
   FileCheck2,
-  Sparkles
+  Sparkles,
+  Award,
+  Printer,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function ApprovalCentrePage() {
@@ -33,6 +37,24 @@ export default function ApprovalCentrePage() {
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<'approved' | 'rejected' | 'changes_requested'>('approved');
   const [comments, setComments] = useState('');
+  const [stampHash, setStampHash] = useState('');
+  const [stampTime, setStampTime] = useState('');
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [certSub, setCertSub] = useState<ContentSubmission | null>(null);
+  const [copiedCert, setCopiedCert] = useState(false);
+
+  const handleOpenCertificate = (sub: ContentSubmission) => {
+    setCertSub(sub);
+    setCertModalOpen(true);
+  };
+
+  const handleCopyCertLink = () => {
+    if (typeof window !== 'undefined' && certSub) {
+      navigator.clipboard?.writeText(`https://brandpilot.ai/verify/AUTH-APP-${certSub.id.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase()}`);
+      setCopiedCert(true);
+      setTimeout(() => setCopiedCert(false), 2000);
+    }
+  };
 
   const filteredSubs = submissions.filter(s => {
     if (filter === 'all') return true;
@@ -42,6 +64,8 @@ export default function ApprovalCentrePage() {
   const handleOpenDecision = (sub: ContentSubmission, action: 'approved' | 'rejected' | 'changes_requested') => {
     setSelectedSub(sub);
     setReviewAction(action);
+    setStampHash(`AUTH-APP-${sub.id.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`);
+    setStampTime(new Date().toLocaleDateString());
     setComments(
       action === 'approved'
         ? 'Verified all factual statements against SLA specifications and Communication Manual Section 4.2. Approved for external distribution.'
@@ -228,9 +252,19 @@ export default function ApprovalCentrePage() {
                 <td className="py-4 px-4 text-right">
                   <div className="flex items-center justify-end gap-2">
                     {sub.status === 'approved' ? (
-                      <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">
-                        ✓ Signed Off (AUTH-APP-8910)
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">
+                          ✓ Signed Off
+                        </span>
+                        <button
+                          onClick={() => handleOpenCertificate(sub)}
+                          className="px-2.5 py-1 bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-900 border border-amber-300 rounded font-semibold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                          title="View Official Compliance Certificate"
+                        >
+                          <Award className="w-3.5 h-3.5 text-amber-600" />
+                          <span>View Certificate</span>
+                        </button>
+                      </div>
                     ) : (
                       <>
                         <button
@@ -284,7 +318,7 @@ export default function ApprovalCentrePage() {
                 <span className="font-bold block">Cryptographic Audit Signature:</span>
                 <span>Reviewer: {currentUser.full_name} ({currentRole})</span>
                 <div className="font-mono text-[10px] text-emerald-700 mt-1">
-                  Hash: SHA256:{Math.random().toString(36).substring(2, 12).toUpperCase()} • Timestamp: {new Date().toISOString()}
+                  Hash: SHA256:{stampHash} • Verified: {stampTime}
                 </div>
               </div>
             )}
@@ -318,6 +352,164 @@ export default function ApprovalCentrePage() {
               >
                 Confirm {reviewAction === 'approved' ? 'Approval' : 'Changes'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Certificate Modal */}
+      {certModalOpen && certSub && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                <span className="font-bold text-sm tracking-wide">Brand Governance Verification Certificate</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') window.print();
+                  }}
+                  className="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print / PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCertModalOpen(false)}
+                  className="px-2.5 py-1 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Certificate Body */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 bg-gradient-to-b from-amber-50/20 via-white to-slate-50/40">
+              <div className="border-4 border-double border-amber-300/80 rounded-xl p-6 sm:p-8 relative bg-white shadow-xs">
+                {/* Watermark badge */}
+                <div className="text-center space-y-2 pb-6 border-b border-amber-200/60">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md mx-auto mb-2">
+                    <ShieldCheck className="w-8 h-8" />
+                  </div>
+                  <div className="text-[10px] tracking-widest uppercase font-mono font-bold text-amber-700">
+                    Official Certification of Compliance
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-serif font-extrabold text-slate-900 tracking-tight">
+                    BRANDPILOT GOVERNANCE AUTHORIZATION
+                  </h2>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    This certifies that the undermentioned content asset has been audited, evaluated against brand knowledge standards, and approved for public distribution.
+                  </p>
+                </div>
+
+                {/* Content Asset Info */}
+                <div className="py-6 space-y-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                      <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Asset Title</div>
+                      <div className="font-bold text-slate-900 text-sm mt-0.5">{certSub.title}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Content Format</div>
+                      <div className="font-semibold text-slate-800 capitalize mt-0.5">{certSub.content_type.replace('_', ' ')}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Creator / Author</div>
+                      <div className="font-semibold text-slate-800 mt-0.5">{certSub.creator_name}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Workspace</div>
+                      <div className="font-semibold text-slate-800 mt-0.5">{currentWorkspace?.name ?? 'Enterprise Workspace'}</div>
+                    </div>
+                  </div>
+
+                  {/* Policy Audit Checklist */}
+                  <div className="space-y-2 pt-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-600">
+                      Standard Policy Verifications:
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/70 border border-emerald-100 text-emerald-900">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-medium text-[11px]">Tone & Voice Guidelines (100%)</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/70 border border-emerald-100 text-emerald-900">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-medium text-[11px]">Regulatory Disclaimers Enforced</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/70 border border-emerald-100 text-emerald-900">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-medium text-[11px]">Product SLA & Fact Specifications</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/70 border border-emerald-100 text-emerald-900">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-medium text-[11px]">Competitor Non-Disparagement</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sign-off Seal & Cryptographic Stamp */}
+                <div className="pt-6 border-t border-amber-200/60 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Cryptographic Token ID</div>
+                    <div className="font-mono text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded inline-block">
+                      AUTH-APP-{certSub.id.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase()}-9481-VERIFIED
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Audit Score: <span className="font-bold text-emerald-600">{certSub.compliance_score}%</span> • Authorized by Governance Policy v2.4
+                    </div>
+                  </div>
+
+                  <div className="text-right sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0">
+                    <div className="font-serif italic text-base text-slate-800 font-bold tracking-wide">
+                      Sarah Lin
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500 uppercase">
+                      Director of Brand Communications
+                    </div>
+                    <div className="text-[9px] text-slate-400">
+                      Authorized Reviewer Signature
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCopyCertLink}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedCert ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                  <span>{copiedCert ? 'ID Copied!' : 'Copy Verification ID'}</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') window.print();
+                    }}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print Certificate</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCertModalOpen(false)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

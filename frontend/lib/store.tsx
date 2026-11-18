@@ -101,6 +101,7 @@ interface BrandPilotContextType {
 
   // Correction Studio
   applySuggestion: (submissionId: string, findingId: string, customText?: string) => Promise<void>;
+  applyAllSuggestions: (submissionId: string) => Promise<void>;
   rejectFinding: (submissionId: string, findingId: string) => Promise<void>;
   updateDraftText: (submissionId: string, newText: string) => void;
 
@@ -250,13 +251,13 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Sync role changes with default personas
-  useEffect(() => {
-    // If the current user matches one of the demo users, keep avatar/role synced
-    const demo = DEMO_USERS[currentRole];
+  const handleRoleChange = (role: UserRole) => {
+    setCurrentRole(role);
+    const demo = DEMO_USERS[role];
     if (demo && currentUser.id.startsWith('user-')) {
       setCurrentUser(demo);
     }
-  }, [currentRole]);
+  };
 
   // Account creation: Register new enterprise account
   const registerUser = async (data: { fullName: string; email: string; orgName: string; password?: string }) => {
@@ -820,7 +821,7 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     return submissionId;
   };
 
-  // Apply a suggested correction to text
+  // Apply a suggested correction to text (robust case-insensitive replacement)
   const applySuggestion = async (submissionId: string, findingId: string, customText?: string) => {
     const sub = submissions.find(s => s.id === submissionId);
     const subFindings = findings[submissionId] || [];
@@ -828,7 +829,14 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     if (!sub || !targetFinding) return;
 
     const replacement = customText !== undefined ? customText : targetFinding.suggested_correction;
-    const updatedText = sub.current_text.replace(targetFinding.original_text, replacement);
+    const escaped = targetFinding.original_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'i');
+    let updatedText = sub.current_text;
+    if (regex.test(updatedText)) {
+      updatedText = updatedText.replace(regex, replacement);
+    } else {
+      updatedText = updatedText.replace(targetFinding.original_text, replacement);
+    }
 
     // Recalculate score
     const remainingPending = subFindings.filter(f => f.id !== findingId && f.status === 'pending');
@@ -853,6 +861,47 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
 
     showToast(`Correction applied! Compliance score rose to ${newScore}%.`, 'success');
     await BrandPilotAPI.applySuggestion(findingId, { custom_text: replacement, accepted: true });
+  };
+
+  // Apply all pending suggestions across the document
+  const applyAllSuggestions = async (submissionId: string) => {
+    const sub = submissions.find(s => s.id === submissionId);
+    const subFindings = findings[submissionId] || [];
+    if (!sub || subFindings.length === 0) return;
+
+    let updatedText = sub.current_text;
+    const updatedFindings = subFindings.map(f => {
+      if (f.status === 'pending') {
+        const escaped = f.original_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escaped, 'i');
+        if (regex.test(updatedText)) {
+          updatedText = updatedText.replace(regex, f.suggested_correction);
+        } else {
+          updatedText = updatedText.replace(f.original_text, f.suggested_correction);
+        }
+        return { ...f, status: 'accepted' as const };
+      }
+      return f;
+    });
+
+    setSubmissions(prev =>
+      prev.map(s => {
+        if (s.id !== submissionId) return s;
+        return {
+          ...s,
+          current_text: updatedText,
+          compliance_score: 100,
+          updated_at: new Date().toISOString()
+        };
+      })
+    );
+
+    setFindings(prev => ({
+      ...prev,
+      [submissionId]: updatedFindings
+    }));
+
+    showToast('Applied all suggested corrections! Compliance score reached 100%.', 'success');
   };
 
   // Dismiss a finding
@@ -965,7 +1014,7 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
       value={{
         currentUser,
         currentRole,
-        setCurrentRole,
+        setCurrentRole: handleRoleChange,
         registeredUsers,
         registerUser,
         loginUser,
@@ -993,6 +1042,7 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         getSubmissionFindings,
         runAudit,
         applySuggestion,
+        applyAllSuggestions,
         rejectFinding,
         updateDraftText,
         submitForApproval,

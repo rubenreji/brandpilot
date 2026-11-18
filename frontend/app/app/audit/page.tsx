@@ -17,7 +17,12 @@ import {
   CheckCircle2,
   Upload,
   FileType,
-  FileUp
+  FileUp,
+  Edit3,
+  Zap,
+  Clock,
+  AlignLeft,
+  Check
 } from 'lucide-react';
 
 export default function ContentAuditPage() {
@@ -43,6 +48,44 @@ export default function ContentAuditPage() {
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditStep, setAuditStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Live client-side keystroke linter & typography metrics
+  const liveStats = React.useMemo(() => {
+    const trimmed = contentBody.trim();
+    if (!trimmed) {
+      return { words: 0, chars: 0, readingTimeMinutes: 0, detectedFlags: [] };
+    }
+    const words = trimmed.split(/\s+/).filter(Boolean).length;
+    const chars = contentBody.length;
+    const readingTimeMinutes = Math.max(1, Math.ceil(words / 200));
+
+    const rules = [
+      { pattern: /\b(AI magic|magic|superpowers?)\b/gi, label: 'Prohibited Buzzword: "AI magic"' },
+      { pattern: /\b(India's No\.?\s?1|world's best|best solution)\b/gi, label: 'Unverified Superlative' },
+      { pattern: /\b(guarantees? 100%|100% (accuracy|secure|uptime))\b/gi, label: 'Absolute Guarantee' },
+      { pattern: /\bauracloud\b/g, label: 'Lowercase Brand Name (Use AuraCloud)' },
+      { pattern: /\b(cheapest solution|cheapest)\b/gi, label: 'Positioning Violation: "cheapest"' }
+    ];
+
+    const detectedFlags: string[] = [];
+    for (const r of rules) {
+      if (r.pattern.test(contentBody)) {
+        detectedFlags.push(r.label);
+      }
+    }
+
+    return { words, chars, readingTimeMinutes, detectedFlags };
+  }, [contentBody]);
+
+  const handleCleanWhitespace = () => {
+    if (!contentBody) return;
+    const cleaned = contentBody
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .trim();
+    setContentBody(cleaned);
+    showToast('Cleaned excessive whitespace and line breaks.', 'info');
+  };
 
   const toggleCategory = (cat: string) => {
     if (categories.includes(cat)) {
@@ -157,6 +200,33 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
         };
         reader.readAsText(file);
       }
+    }
+  };
+
+  const handleOpenDirectlyInStudio = async () => {
+    if (!contentBody.trim()) {
+      showToast('Please upload a document or enter candidate text first.', 'error');
+      return;
+    }
+    const currentTitle = title.trim() || uploadedFileName?.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Document Draft';
+    if (!title.trim()) {
+      setTitle(currentTitle);
+    }
+    setIsAuditing(true);
+    try {
+      const subId = await runAudit({
+        title: currentTitle,
+        content_type: contentType,
+        text: contentBody,
+        campaign_name: campaign,
+        target_audience: targetAudience,
+        check_categories: categories
+      });
+      setIsAuditing(false);
+      router.push(`/app/corrections/${subId}`);
+    } catch {
+      setIsAuditing(false);
+      showToast('Error opening in Correction Studio.', 'error');
     }
   };
 
@@ -320,21 +390,124 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
           </div>
         )}
 
-        {/* Text Area */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span className="font-semibold text-slate-700">Candidate Draft Body</span>
-            <span>{contentBody.trim() ? contentBody.trim().split(/\s+/).length : 0} words</span>
+        {/* Uploaded File Action Banner */}
+        {uploadedFileName && contentBody && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/90 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in shadow-xs">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <span>{uploadedFileName}</span>
+                  <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold">
+                    {contentBody.trim().split(/\s+/).filter(Boolean).length} words ready
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Document text extracted. You can review/edit it below or launch the Correction Studio immediately.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleOpenDirectlyInStudio}
+                className="px-4 py-2.5 bg-[#101827] hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-blue-400" />
+                <span>Open in Correction Studio</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Text Area & Live Keystroke Linter */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-xs">
+          {/* Real-time metrics bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-slate-800">Candidate Draft Body</span>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Active Linter: Live (&lt;5ms)</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-slate-500 text-[11px]">
+              <span className="flex items-center gap-1">
+                <AlignLeft className="w-3.5 h-3.5 text-slate-400" />
+                <span>{liveStats.words} words • {liveStats.chars} chars</span>
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>~{liveStats.readingTimeMinutes} min read</span>
+              </span>
+              {contentBody.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleCleanWhitespace}
+                  className="text-blue-600 hover:text-blue-700 font-medium hover:underline cursor-pointer ml-1"
+                >
+                  Trim Spaces
+                </button>
+              )}
+            </div>
           </div>
 
           <textarea
             rows={10}
             required
-            placeholder="Paste your announcement, blog draft, or campaign copy here to run real-time brand compliance verification..."
+            placeholder="Paste your announcement, blog draft, or campaign copy here to run real-time brand compliance verification... (Press Ctrl + Enter to audit)"
             value={contentBody}
             onChange={e => setContentBody(e.target.value)}
-            className="w-full text-sm font-sans leading-relaxed p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 font-normal text-slate-900"
+            onKeyDown={e => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                if (contentBody.trim() && title.trim()) {
+                  handleSubmitAudit(e);
+                } else {
+                  showToast('Please provide a title and draft content before auditing.', 'info');
+                }
+              }
+            }}
+            className="w-full text-sm font-sans leading-relaxed p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 font-normal text-slate-900 transition-all"
           />
+
+          {/* Real-time Keystroke Linting Results Drawer */}
+          {contentBody.trim().length > 0 && (
+            <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-amber-500" />
+                  <span>Real-time Preview:</span>
+                </span>
+                {liveStats.detectedFlags.length > 0 ? (
+                  liveStats.detectedFlags.map((flag, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-medium flex items-center gap-1"
+                    >
+                      <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                      <span>{flag}</span>
+                    </span>
+                  ))
+                ) : (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium flex items-center gap-1">
+                    <Check className="w-2.5 h-2.5 text-emerald-600" />
+                    <span>No immediate terminology violations found</span>
+                  </span>
+                )}
+              </div>
+
+              <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
+                Shortcut: [Ctrl + Enter] to audit
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Active Policy Checkboxes */}

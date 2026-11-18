@@ -17,7 +17,13 @@ import {
   CornerDownRight,
   Send,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  Download,
+  Copy,
+  FileCode,
+  FileText,
+  Award,
+  CheckCheck
 } from 'lucide-react';
 
 export default function CorrectionStudioPage() {
@@ -29,6 +35,7 @@ export default function CorrectionStudioPage() {
     getSubmission,
     getSubmissionFindings,
     applySuggestion,
+    applyAllSuggestions,
     rejectFinding,
     updateDraftText,
     submitForApproval,
@@ -41,10 +48,138 @@ export default function CorrectionStudioPage() {
   const [activeFindingId, setActiveFindingId] = useState<string | null>(null);
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
   const [customReplacement, setCustomReplacement] = useState<string>('');
-  const [isManualEditMode, setIsManualEditMode] = useState(false);
+  const [viewMode, setViewMode] = useState<'annotated' | 'editor' | 'diff'>('annotated');
   const [manualText, setManualText] = useState(submission?.current_text || '');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [submissionNote, setSubmissionNote] = useState('');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [copiedExportFormat, setCopiedExportFormat] = useState<string | null>(null);
+
+  const handleApply = async (findingId: string) => {
+    if (!submission) return;
+    await applySuggestion(submission.id, findingId);
+  };
+
+  const handleReject = async (findingId: string) => {
+    if (!submission) return;
+    await rejectFinding(submission.id, findingId);
+  };
+
+  const handleHighlightClick = (findingId: string) => {
+    setActiveFindingId(findingId);
+    if (typeof document !== 'undefined') {
+      const cardEl = document.getElementById(`card-${findingId}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cardEl.classList.add('ring-4', 'ring-blue-500/30');
+        setTimeout(() => cardEl.classList.remove('ring-4', 'ring-blue-500/30'), 1500);
+      }
+    }
+  };
+
+  // Keyboard ergonomics for power users: J/K to navigate, A to apply
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+
+      const pending = findings.filter(f => f.status === 'pending');
+      if (pending.length === 0) return;
+
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const currentIdx = pending.findIndex(f => f.id === activeFindingId);
+        const nextIdx = currentIdx < pending.length - 1 ? currentIdx + 1 : 0;
+        handleHighlightClick(pending[nextIdx].id);
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const currentIdx = pending.findIndex(f => f.id === activeFindingId);
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : pending.length - 1;
+        handleHighlightClick(pending[prevIdx].id);
+      } else if (e.key === 'a' || e.key === 'A') {
+        if (activeFindingId) {
+          e.preventDefault();
+          handleApply(activeFindingId);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeFindingId, findings, submission]);
+
+  // Export helpers
+  const handleDownloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportMarkdown = () => {
+    if (!submission) return;
+    const mdContent = `---
+title: "${submission.title}"
+content_type: "${submission.content_type}"
+compliance_score: ${submission.compliance_score}%
+author: "${submission.creator_name}"
+exported_at: "${new Date().toISOString()}"
+governance_engine: "BrandPilot Enterprise"
+---
+
+# ${submission.title}
+
+${submission.current_text}
+`;
+    const cleanFilename = submission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    handleDownloadFile(mdContent, `${cleanFilename || 'draft'}-verified.md`, 'text/markdown');
+    setCopiedExportFormat('md');
+    setTimeout(() => setCopiedExportFormat(null), 2500);
+  };
+
+  const handleCopyHtml = () => {
+    if (!submission) return;
+    const paragraphs = submission.current_text
+      .split(/\n\n+/)
+      .map(p => `  <p>${p.trim()}</p>`)
+      .join('\n');
+    const htmlSnippet = `<article class="brandpilot-verified-content">\n  <h1>${submission.title}</h1>\n${paragraphs}\n</article>`;
+    navigator.clipboard?.writeText(htmlSnippet);
+    setCopiedExportFormat('html');
+    setTimeout(() => setCopiedExportFormat(null), 2500);
+  };
+
+  const handleExportAuditReport = () => {
+    if (!submission) return;
+    const auditReport = {
+      report_title: "BrandPilot Compliance Audit Executive Summary",
+      document_title: submission.title,
+      content_type: submission.content_type,
+      author: submission.creator_name,
+      compliance_score: submission.compliance_score,
+      status: submission.status,
+      timestamp: new Date().toISOString(),
+      findings_resolved: findings.map(f => ({
+        original_flagged: f.original_text,
+        applied_correction: f.suggested_correction,
+        category: f.category,
+        severity: f.severity,
+        rule_reference: f.relevant_brand_rule,
+        citation: `${f.source_document} (${f.page_reference})`,
+        status: f.status
+      }))
+    };
+    handleDownloadFile(
+      JSON.stringify(auditReport, null, 2),
+      `audit-report-${submission.id.replace(/[^a-zA-Z0-9]/g, '')}.json`,
+      'application/json'
+    );
+    setCopiedExportFormat('json');
+    setTimeout(() => setCopiedExportFormat(null), 2500);
+  };
 
   // Keep manual text in sync when automated suggestions are accepted or updated
   React.useEffect(() => {
@@ -71,17 +206,9 @@ export default function CorrectionStudioPage() {
   const pendingFindings = findings.filter(f => f.status === 'pending');
   const acceptedFindings = findings.filter(f => f.status === 'accepted');
 
-  const handleApply = async (findingId: string) => {
-    await applySuggestion(submission.id, findingId);
-  };
-
-  const handleReject = async (findingId: string) => {
-    await rejectFinding(submission.id, findingId);
-  };
-
   const handleSaveManualEdit = () => {
     updateDraftText(submission.id, manualText);
-    setIsManualEditMode(false);
+    setViewMode('annotated');
   };
 
   const handleSubmitForReview = async () => {
@@ -90,10 +217,10 @@ export default function CorrectionStudioPage() {
     router.push('/app/approvals');
   };
 
-  // Render text with highlight spans
+  // Render text with highlight spans (supporting case-insensitivity & overlap protection)
   const renderAnnotatedText = () => {
     const text = submission.current_text;
-    // Find active pending findings present in the current text
+    const lowerText = text.toLowerCase();
     const activeMatches: {
       finding: (typeof findings)[0];
       startIndex: number;
@@ -102,29 +229,46 @@ export default function CorrectionStudioPage() {
 
     findings.forEach(f => {
       if (f.status === 'pending') {
-        const idx = text.indexOf(f.original_text);
-        if (idx !== -1) {
+        const targetLower = f.original_text.toLowerCase();
+        let pos = 0;
+        while (pos < lowerText.length) {
+          const idx = lowerText.indexOf(targetLower, pos);
+          if (idx === -1) break;
           activeMatches.push({
             finding: f,
             startIndex: idx,
-            endIndex: idx + f.original_text.length
+            endIndex: idx + targetLower.length
           });
+          pos = idx + targetLower.length;
         }
       }
     });
 
     if (activeMatches.length === 0) {
-      return <div className="whitespace-pre-wrap leading-relaxed">{text}</div>;
+      return (
+        <div className="whitespace-pre-wrap leading-relaxed text-slate-800">
+          {text}
+        </div>
+      );
     }
 
     // Sort by start index
-    activeMatches.sort((a, b) => a.startIndex - b.startIndex);
+    activeMatches.sort((a, b) => a.startIndex - b.startIndex || (b.endIndex - a.endIndex));
+
+    // Filter out overlapping matches
+    const nonOverlapping: typeof activeMatches = [];
+    let curEnd = 0;
+    activeMatches.forEach(m => {
+      if (m.startIndex >= curEnd) {
+        nonOverlapping.push(m);
+        curEnd = m.endIndex;
+      }
+    });
 
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;
 
-    activeMatches.forEach((match, index) => {
-      // Unhighlighted text before match
+    nonOverlapping.forEach((match, index) => {
       if (match.startIndex > lastIndex) {
         elements.push(
           <span key={`text-${lastIndex}`}>{text.substring(lastIndex, match.startIndex)}</span>
@@ -136,19 +280,19 @@ export default function CorrectionStudioPage() {
 
       const badgeColor =
         severity === 'critical'
-          ? 'bg-rose-100 text-rose-800 border-rose-300 ring-rose-400'
+          ? 'bg-rose-100 text-rose-800 border-rose-300 ring-rose-400 hover:bg-rose-200'
           : severity === 'high'
-          ? 'bg-amber-100 text-amber-800 border-amber-300 ring-amber-400'
-          : 'bg-blue-100 text-blue-800 border-blue-300 ring-blue-400';
+          ? 'bg-amber-100 text-amber-800 border-amber-300 ring-amber-400 hover:bg-amber-200'
+          : 'bg-blue-100 text-blue-800 border-blue-300 ring-blue-400 hover:bg-blue-200';
 
       elements.push(
         <mark
           key={`match-${match.finding.id}-${index}`}
-          onClick={() => setActiveFindingId(match.finding.id)}
-          className={`cursor-pointer px-1 py-0.5 rounded border transition-all inline-block font-medium ${badgeColor} ${
-            isSelected ? 'ring-2' : ''
+          onClick={() => handleHighlightClick(match.finding.id)}
+          className={`cursor-pointer px-1.5 py-0.5 rounded-md border transition-all duration-200 inline-block font-semibold shadow-xs ${badgeColor} ${
+            isSelected ? 'ring-2 ring-offset-1 scale-[1.03]' : ''
           }`}
-          title={`Click to inspect finding: ${match.finding.relevant_brand_rule}`}
+          title={`Click to inspect rule: ${match.finding.relevant_brand_rule}`}
         >
           {text.substring(match.startIndex, match.endIndex)}
         </mark>
@@ -165,9 +309,9 @@ export default function CorrectionStudioPage() {
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Studio Header Bar */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 card-hover-effect">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
@@ -196,11 +340,22 @@ export default function CorrectionStudioPage() {
         </div>
 
         {/* Live Compliance Score Meter & Submission CTA */}
-        <div className="flex items-center gap-4">
-          <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-center">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          {pendingFindings.length > 0 && (
+            <button
+              type="button"
+              onClick={() => applyAllSuggestions(submission.id)}
+              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+              <span>Accept All Fixes ({pendingFindings.length})</span>
+            </button>
+          )}
+
+          <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-center transition-all">
             <div className="text-xs text-slate-500 font-medium">Compliance Score</div>
             <div
-              className={`text-2xl font-black ${
+              className={`text-2xl font-black transition-all ${
                 (submission.compliance_score ?? 0) >= 90
                   ? 'text-emerald-600'
                   : (submission.compliance_score ?? 0) >= 70
@@ -213,8 +368,18 @@ export default function CorrectionStudioPage() {
           </div>
 
           <button
+            type="button"
+            onClick={() => setIsExportModalOpen(true)}
+            className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-xl shadow-xs transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            title="Export verified content or compliance audit report"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-600" />
+            <span>Export</span>
+          </button>
+
+          <button
             onClick={() => setIsSubmitModalOpen(true)}
-            className="px-5 py-2.5 bg-[#101827] hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            className="px-5 py-2.5 bg-[#101827] hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-sm transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
           >
             <span>Submit for Human Approval</span>
             <ArrowRight className="w-4 h-4 text-blue-400" />
@@ -222,63 +387,166 @@ export default function CorrectionStudioPage() {
         </div>
       </div>
 
+      {/* 100% Compliance Celebration Banner */}
+      {((submission.compliance_score ?? 0) === 100 || pendingFindings.length === 0) && (
+        <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-scale-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+              <Award className="w-6 h-6 text-white animate-float" />
+            </div>
+            <div>
+              <div className="font-extrabold text-sm sm:text-base flex items-center gap-2">
+                <span>100% Brand Compliance Achieved!</span>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-mono font-normal">
+                  All Citations Verified
+                </span>
+              </div>
+              <p className="text-xs text-emerald-100 mt-0.5">
+                Every guideline discrepancy has been corrected. This asset is ready for formal human publication sign-off.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsSubmitModalOpen(true)}
+            className="px-4 py-2 bg-white text-emerald-900 hover:bg-emerald-50 rounded-xl text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer transform hover:scale-105 active:scale-95"
+          >
+            <Send className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Submit for Sign-off Now</span>
+          </button>
+        </div>
+      )}
+
       {/* Main 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (7 cols): Draft Review Text Area */}
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <div className="flex items-center gap-2">
-              <FileCheck2 className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-bold text-slate-900">Interactive Draft Editor</span>
-            </div>
-
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-2 flex-wrap">
+            {/* View Mode Tabs */}
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setViewMode('annotated')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  viewMode === 'annotated'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Annotated Review
+              </button>
               <button
                 type="button"
                 onClick={() => {
-                  if (isManualEditMode) {
-                    handleSaveManualEdit();
-                  } else {
-                    setManualText(submission.current_text);
-                    setIsManualEditMode(true);
-                  }
+                  setManualText(submission.current_text);
+                  setViewMode('editor');
                 }}
-                className="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center gap-1"
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+                  viewMode === 'editor'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{isManualEditMode ? 'Save Edits' : 'Edit Manually'}</span>
+                <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Live Editor</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('diff')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  viewMode === 'diff'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Changes Diff
               </button>
             </div>
+
+            {viewMode === 'editor' && (
+              <button
+                type="button"
+                onClick={handleSaveManualEdit}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-xs transition-all"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save & Apply Changes</span>
+              </button>
+            )}
           </div>
 
-          {isManualEditMode ? (
-            <textarea
-              rows={14}
-              value={manualText}
-              onChange={e => setManualText(e.target.value)}
-              className="w-full text-sm font-sans leading-relaxed p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900"
-            />
+          {viewMode === 'editor' ? (
+            <div className="space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+                <span>Direct Document Editor (Edits reflect live across audit findings)</span>
+                <span>{manualText.trim() ? manualText.trim().split(/\s+/).filter(Boolean).length : 0} words • {manualText.length} chars</span>
+              </div>
+              <textarea
+                rows={16}
+                value={manualText}
+                onChange={e => setManualText(e.target.value)}
+                placeholder="Type or edit your draft text here..."
+                className="w-full text-sm font-sans leading-relaxed p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+              />
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                <span>Tip: Click &quot;Save & Apply Changes&quot; above to re-index all findings against active brand rules.</span>
+                <button
+                  type="button"
+                  onClick={() => setManualText(submission.original_text)}
+                  className="text-slate-400 hover:text-slate-700 underline"
+                >
+                  Reset to Original Text
+                </button>
+              </div>
+            </div>
+          ) : viewMode === 'diff' ? (
+            <div className="space-y-4 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-rose-50/50 border border-rose-200 rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
+                    <span>Original Uploaded Draft</span>
+                    <span className="text-[10px] font-normal lowercase">initial audit</span>
+                  </div>
+                  <div className="text-xs text-slate-800 font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
+                    {submission.original_text}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-2">
+                  <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                    <span>Current Compliant Version</span>
+                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      {submission.compliance_score}% score
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-900 font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
+                    {submission.current_text}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="text-sm font-sans leading-relaxed text-slate-800 p-2 min-h-[300px]">
-              {renderAnnotatedText()}
+            <div className="space-y-3 animate-fade-in">
+              <div className="text-sm font-sans leading-relaxed text-slate-800 p-2 min-h-[300px]">
+                {renderAnnotatedText()}
+              </div>
+
+              {/* Hint legend */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded bg-rose-200 border border-rose-400"></span> Critical
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded bg-amber-200 border border-amber-400"></span> High
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded bg-blue-200 border border-blue-400"></span> Medium
+                  </span>
+                </div>
+                <span className="text-slate-400">Click any highlight to jump to citation card</span>
+              </div>
             </div>
           )}
-
-          {/* Hint legend */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-rose-200 border border-rose-400"></span> Critical
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-amber-200 border border-amber-400"></span> High
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-blue-200 border border-blue-400"></span> Medium
-              </span>
-            </div>
-            <span className="text-slate-400">Click any highlight to inspect citation</span>
-          </div>
         </div>
 
         {/* Right Column (5 cols): Explainable Findings Cards */}
@@ -287,9 +555,20 @@ export default function CorrectionStudioPage() {
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Source-Backed Findings ({findings.length})
             </h2>
-            <span className="text-xs font-semibold text-emerald-600">
-              {acceptedFindings.length} resolved
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                {acceptedFindings.length} resolved
+              </span>
+              {pendingFindings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => applyAllSuggestions(submission.id)}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline"
+                >
+                  Accept all fixes
+                </button>
+              )}
+            </div>
           </div>
 
           {findings.map((finding, idx) => {
@@ -302,11 +581,11 @@ export default function CorrectionStudioPage() {
                 key={finding.id}
                 id={`card-${finding.id}`}
                 onClick={() => setActiveFindingId(finding.id)}
-                className={`bg-white rounded-2xl p-5 border transition-all shadow-xs ${
+                className={`bg-white rounded-2xl p-5 border transition-all duration-200 shadow-xs card-hover-effect ${
                   isSelected
                     ? 'border-blue-500 ring-2 ring-blue-500/20'
                     : isResolved
-                    ? 'border-emerald-200 bg-emerald-50/20 opacity-75'
+                    ? 'border-emerald-200 bg-emerald-50/20 opacity-80'
                     : isRejected
                     ? 'border-slate-200 bg-slate-50 opacity-60'
                     : 'border-slate-200 hover:border-slate-300'
@@ -499,6 +778,106 @@ export default function CorrectionStudioPage() {
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Request Sign-off</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Format Publishing & Export Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-5 animate-scale-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Download className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-bold text-slate-900">Publish & Export Content</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(false)}
+                className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Export your verified, compliant draft into standard enterprise formats or export the complete audit trail.
+            </p>
+
+            <div className="space-y-3">
+              {/* Option 1: Markdown (.md) */}
+              <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 transition-all flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <FileCode className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Clean Markdown (.md)</div>
+                    <div className="text-[11px] text-slate-500">Includes frontmatter metadata, headers, and clean prose</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportMarkdown}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedExportFormat === 'md' ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Download className="w-3.5 h-3.5" />}
+                  <span>{copiedExportFormat === 'md' ? 'Downloaded!' : 'Download .md'}</span>
+                </button>
+              </div>
+
+              {/* Option 2: Clean HTML for CMS */}
+              <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 transition-all flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                    <Copy className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">CMS HTML Snippet</div>
+                    <div className="text-[11px] text-slate-500">Formatted semantic HTML ready for WordPress, Webflow, or Notion</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyHtml}
+                  className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedExportFormat === 'html' ? <CheckCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                  <span>{copiedExportFormat === 'html' ? 'Copied HTML!' : 'Copy HTML'}</span>
+                </button>
+              </div>
+
+              {/* Option 3: Compliance Audit JSON Trail */}
+              <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/20 transition-all flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Executive Audit Trail (.json)</div>
+                    <div className="text-[11px] text-slate-500">Full audit log of resolved findings, policy citations, and timestamps</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportAuditReport}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedExportFormat === 'json' ? <CheckCheck className="w-3.5 h-3.5 text-white" /> : <Download className="w-3.5 h-3.5" />}
+                  <span>{copiedExportFormat === 'json' ? 'Exported!' : 'Export JSON'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Done
               </button>
             </div>
           </div>

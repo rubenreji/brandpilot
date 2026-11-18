@@ -88,7 +88,7 @@ export default function DashboardPage() {
   const COLORS = ['#3978E8', '#E9A23B', '#DC5353', '#16A36A', '#8B5CF6'];
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
       {/* Header with Title & Date Range */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
@@ -133,7 +133,7 @@ export default function DashboardPage() {
       {/* KPI Cards Grid (Values computed directly from records) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* KPI 1 */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
             <span>Total Audits</span>
             <FileCheck2 className="w-4 h-4 text-blue-500" />
@@ -145,7 +145,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI 2 */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
             <span>Pending Reviews</span>
             <Clock className="w-4 h-4 text-amber-500" />
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI 3 */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
             <span>Approved</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
@@ -169,7 +169,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI 4 */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
             <span>Open Issues</span>
             <AlertTriangle className="w-4 h-4 text-rose-500" />
@@ -181,7 +181,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI 5 */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs card-hover-effect">
           <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
             <span>Issues Resolved</span>
             <Sparkles className="w-4 h-4 text-blue-500" />

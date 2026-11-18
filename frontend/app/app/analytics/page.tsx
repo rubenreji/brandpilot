@@ -10,7 +10,10 @@ import {
   CheckCircle2,
   Clock,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Download,
+  Building2,
+  Check
 } from 'lucide-react';
 import {
   BarChart,
@@ -71,21 +74,56 @@ export default function AnalyticsPage() {
     { week: 'Week 6', score: 94 }
   ];
 
+  const [copiedCsv, setCopiedCsv] = React.useState(false);
+
+  const handleExportCsv = () => {
+    const headers = ['Rule Name', 'Violations (30d)', 'Severity Impact', 'Corrective Recommendation'];
+    const rows = violatedRules.map(r => [
+      `"${r.rule.replace(/"/g, '""')}"`,
+      r.violations,
+      `"${r.impact}"`,
+      `"${r.recommendation.replace(/"/g, '""')}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `brandpilot-governance-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setCopiedCsv(true);
+    setTimeout(() => setCopiedCsv(false), 2000);
+  };
+
   return (
     <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Header */}
-      <div className="pb-6 border-b border-slate-200">
-        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">
-          <span>{currentWorkspace.name}</span>
-          <span>•</span>
-          <span>Intelligence Engine</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">
+            <span>{currentWorkspace.name}</span>
+            <span>•</span>
+            <span>Intelligence Engine</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Governance Analytics & Policy Friction
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Identify recurring brand guideline friction, measure team compliance trajectory, and resolve root causes.
+          </p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Governance Analytics & Policy Friction
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Identify recurring brand guideline friction, measure team compliance trajectory, and resolve root causes.
-        </p>
+
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 transition-all cursor-pointer hover:border-slate-300 self-start sm:self-auto"
+        >
+          {copiedCsv ? <Check className="w-4 h-4 text-emerald-600" /> : <Download className="w-4 h-4 text-slate-600" />}
+          <span>{copiedCsv ? 'Exported CSV!' : 'Export Audit Log (CSV)'}</span>
+        </button>
       </div>
 
       {/* Trajectory Banner */}
@@ -111,6 +149,36 @@ export default function AnalyticsPage() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      {/* Department Breakdown & Review Velocity KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { dept: 'Technical Documentation', score: 98, change: '+14% this month', status: 'Highest Compliance', color: 'emerald' },
+          { dept: 'Marketing Communications', score: 92, change: '+18% this month', status: 'Strong Adherence', color: 'blue' },
+          { dept: 'Corporate PR & Press', score: 88, change: '+9% this month', status: 'Moderate Friction', color: 'amber' },
+          { dept: 'Sales Enablement', score: 86, change: '+12% this month', status: 'Needs Alignment', color: 'indigo' }
+        ].map((item, idx) => (
+          <div key={idx} className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs card-hover-effect space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span className="font-semibold text-slate-700 truncate">{item.dept}</span>
+              <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900">{item.score}%</span>
+              <span className="text-[10px] font-semibold text-emerald-600 font-mono">{item.change}</span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${
+                  item.score >= 95 ? 'bg-emerald-500' : item.score >= 90 ? 'bg-blue-500' : 'bg-amber-500'
+                }`}
+                style={{ width: `${item.score}%` }}
+              />
+            </div>
+            <div className="text-[10px] font-medium text-slate-400">{item.status}</div>
+          </div>
+        ))}
       </div>
 
       {/* Actionable Policy Insights */}

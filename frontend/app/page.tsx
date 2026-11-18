@@ -150,15 +150,19 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold mb-6">
-          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+      {/* Hero Section with Ambient Morphing Background */}
+      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center relative overflow-hidden">
+        {/* Ambient Morphing Glow Orbs */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none animate-blob -z-10"></div>
+        <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none animate-blob -z-10" style={{ animationDelay: '4s' }}></div>
+
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/80 border border-blue-200/80 text-blue-700 text-xs font-semibold mb-6 shadow-xs animate-fade-in">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
           <span>AI-Assisted Brand Governance for Everyday Content Teams</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-extrabold text-[#101827] tracking-tight max-w-4xl mx-auto leading-tight sm:leading-tight">
-          Keep Every Piece of Content True to Your Brand.
+          Keep Every Piece of Content <span className="animate-gradient-text">True to Your Brand.</span>
         </h1>
 
         <p className="mt-6 text-lg sm:text-xl text-[#758195] max-w-2xl mx-auto leading-relaxed">
@@ -168,14 +172,14 @@ export default function LandingPage() {
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/app/dashboard"
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#3978E8] text-white font-semibold shadow-md hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-base"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#3978E8] text-white font-semibold shadow-md hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-base hover-lift btn-press"
           >
             <span>Get Started</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/app/corrections/sub-demo-flagged"
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-300 text-slate-800 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-base shadow-xs"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-300 text-slate-800 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-base shadow-xs hover-lift btn-press"
           >
             <span>Live Interactive Demo</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
