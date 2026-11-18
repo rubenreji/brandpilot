@@ -1,4 +1,5 @@
 import os
+import math
 from typing import List, Dict, Any
 import numpy as np
 
@@ -21,7 +22,7 @@ class VisualInspector:
             nparr = np.frombuffer(image_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
-                raise ValueError("Could not decode image")
+                raise ValueError("Could not decode image: unsupported format or corrupt bytes")
             
             height, width, _ = img.shape
             
@@ -29,9 +30,9 @@ class VisualInspector:
             small_img = cv2.resize(img, (150, 150), interpolation=cv2.INTER_AREA)
             pixels = small_img.reshape(-1, 3)
             
-            # Simple K-Means or histogram to find top 5 dominant colors (BGR to HEX)
+            # K-Means clustering to find top dominant colors (BGR to HEX)
             criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-            k = 4
+            k = min(4, len(pixels))
             _, labels, centers = cv2.kmeans(pixels.astype(np.float32), k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
             
             dominant_hex_colors = []
@@ -46,7 +47,7 @@ class VisualInspector:
             off_palette_colors = []
 
             for dom_hex in dominant_hex_colors:
-                # Calculate minimum distance to any approved color
+                # Calculate minimum Euclidean distance to approved color tokens
                 r1, g1, b1 = int(dom_hex[1:3], 16), int(dom_hex[3:5], 16), int(dom_hex[5:7], 16)
                 min_dist = float("inf")
                 closest_approved = ""
@@ -59,20 +60,20 @@ class VisualInspector:
                             min_dist = dist
                             closest_approved = app_hex
 
-                # If distance > 90 in RGB space, it's considered off-palette
+                # If distance > 90 in RGB space and not standard neutral (black/white), flag as off-palette
                 if min_dist > 90 and dom_hex not in ["#000000", "#FFFFFF"]:
                     off_palette_colors.append(dom_hex)
                     issues.append({
                         "category": "visual_inconsistency",
                         "severity": "medium",
                         "title": f"Off-Palette Color Detected: {dom_hex}",
-                        "explanation": f"Dominant color {dom_hex} is not in the approved brand color tokens. Closest approved color is {closest_approved}.",
+                        "explanation": f"Dominant color {dom_hex} is not in approved brand tokens. Closest approved token is {closest_approved} (distance: {round(min_dist, 1)}).",
                         "recommendation": f"Adjust artwork fills or backgrounds to match brand token {closest_approved}."
                     })
                 else:
                     compliant_colors.append(dom_hex)
 
-            visual_score = max(50, 100 - (len(issues) * 15))
+            visual_score = max(0, 100 - (len(issues) * 15))
 
             return {
                 "status": "success",
@@ -83,26 +84,26 @@ class VisualInspector:
                 "logo_detected": True,
                 "visual_score": visual_score,
                 "issues": issues,
-                "limitations_note": "Visual inspections sample dominant raster pixel distributions and cannot substitute manual creative director review."
+                "limitations_note": "Visual inspections sample dominant raster pixel distributions and provide advisory assistance."
             }
 
         except Exception as e:
-            # Fallback if image decode fails
+            # Return explicit failure state rather than fabricated results
             return {
-                "status": "partial",
-                "dominant_colors": ["#101827", "#3978E8", "#F6F8FC"],
-                "compliant_colors": ["#101827", "#3978E8"],
+                "status": "error",
+                "error": str(e),
+                "dimensions": "0x0 px",
+                "dominant_colors": [],
+                "compliant_colors": [],
                 "off_palette_colors": [],
-                "logo_detected": True,
-                "visual_score": 85,
+                "logo_detected": False,
+                "visual_score": 0,
                 "issues": [{
-                    "category": "visual_inconsistency",
-                    "severity": "low",
-                    "title": "Automated color sampling applied",
-                    "explanation": "Image inspected under standard RGB color space.",
-                    "recommendation": "Verify logo clear space before publishing."
+                    "category": "visual_processing_error",
+                    "severity": "high",
+                    "title": "Image Inspection Failed",
+                    "explanation": f"Failed to decode or inspect image: {str(e)}",
+                    "recommendation": "Upload a valid PNG, JPG, or WebP image."
                 }],
-                "limitations_note": "Visual inspector provides advisory checks only."
+                "limitations_note": "Visual inspection could not be completed."
             }
-
-import math

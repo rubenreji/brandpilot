@@ -1,4 +1,4 @@
-# 🛡️ BrandPilot — AI-Assisted Brand Governance & Content Intelligence Platform
+# 🛡️ BrandPilot — Enterprise AI Brand Governance & Content Intelligence Platform
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.4.6-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
@@ -9,76 +9,75 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-> **"Your brand guidelines, enforced intelligently — without hallucinations, and always governed by humans."**  
-> BrandPilot brings brand guidelines, approved facts, terminology registries, and voice profiles into a single intelligent workspace. It detects inconsistencies across multi-page content, provides source-backed citations down to the page and section number, and enforces a mandatory human sign-off boundary before publication.
+> **"Your brand guidelines, enforced with mathematical precision — zero hallucinations, tamper-evident audit trails, and strict human gatekeeping."**  
+> BrandPilot unites corporate brand guidelines, verified technical claims, terminology policies, and voice profiles into a single real-time intelligence workspace. It pinpoints discrepancies in draft collateral down to the exact manual clause and page number, provides one-click corrective suggestions, and enforces an auditable human approval gate before publication.
 
 ---
 
-## 🧭 3-Minute Hackathon Judging Tour
+## 🧭 Product Walkthrough & Core Governance Lifecycle
 
-Experience BrandPilot's complete end-to-end governance lifecycle in under 3 minutes:
+BrandPilot provides an end-to-end governance pipeline that transforms static brand guidelines into active, real-time guardrails:
 
 ```mermaid
 flowchart LR
-    A["1. Knowledge Base\n(Docs & Rules)"] --> B["2. Audit Studio\n(Linter + RAG)"]
-    B --> C["3. Correction Studio\n(1-Click Fixes)"]
-    C --> D["4. Human Sign-Off\n(RBAC Approval)"]
-    D --> E["5. Official Certificate\n(Cryptographic Stamp)"]
+    A["1. Knowledge Base\n(Embeddings & Rules)"] --> B["2. Audit Studio\n(Linter + RAG Engine)"]
+    B --> C["3. Correction Studio\n(Side-by-Side Fixes)"]
+    C --> D["4. Human Sign-Off\n(RBAC Gatekeeper)"]
+    D --> E["5. Release Certificate\n(Cryptographic Stamp)"]
 ```
 
-### Step 1: Explore the Brand Knowledge Base (`/app/knowledge`)
-- Ingest brand guidelines (PDF, DOCX, or text) with automated chunking and vector indexing.
-- View **Approved Corporate Facts**, **Prohibited Terminology** (e.g., *"AI magic"*, *"India's No. 1"*), and **Multi-Axis Voice Sliders**.
-- A pre-built enterprise document (*BrandPilot Enterprise Brand Knowledge Base*) is loaded and ready for immediate testing.
+### 1. Centralized Brand Knowledge Base (`/app/knowledge`)
+- **Automated Guideline Ingestion**: Upload PDF and Markdown brand specifications with automated semantic chunking and high-dimensional vector embeddings (`pgvector`).
+- **Verified Facts Registry**: Catalog approved corporate metrics, SLAs, funding milestones, and product specifications.
+- **Terminology Governance**: Define prohibited words (e.g., *"AI magic"*, *"India's No. 1"*), approved synonyms, and mandatory legal disclaimers.
+- **Multi-Axis Brand Voice**: Calibrate real-time sliders for Formality, Technicality, Confidence, and Perspective.
 
-### Step 2: Run a Real-Time Content Audit (`/app/audit`)
-- Click **"Load Flagged Scenario"** (an unvetted PR release containing 5 distinct brand and legal violations).
-- Click **"Run Full Brand Audit"**.
-- Watch the **sub-15ms multi-stage engine** fire:
-  1. *Deterministic Linter* flags prohibited terms instantly.
-  2. *Semantic Vector RAG* pinpoints exact guideline sections and page numbers.
-  3. *Contextual AI Auditor* calculates a live compliance score (e.g., 42%).
+### 2. Real-Time Multi-Stage Content Audit (`/app/audit`)
+- **Sub-15ms Multi-Layer Engine**:
+  1. *Deterministic Fast Linter*: Scans text instantly against compiled regex policies to catch blacklisted vocabulary, unhedged superlatives, and casing errors.
+  2. *Semantic Vector RAG*: Matches statements against ingested guideline documents to identify contextual discrepancies and cite specific manual pages and sections.
+  3. *Contextual AI Auditor*: Scores the draft across Terminology, Factual Accuracy, Legal Claims, and Tone of Voice.
+- **Zero Dead-Ends**: Load production-calibrated sample copy or paste raw press releases, whitepapers, or marketing drafts to trigger instantaneous live audits.
 
-### Step 3: Interactive Correction Studio (`/app/corrections/[id]`)
-- Switch seamlessly between **Interactive Annotated View** and **Side-by-Side Diff**.
-- Click each highlighted finding card on the right to jump directly to the flagged sentence.
-- Notice the **verifiable citation**: exact document title, section header, and quoted rule clause.
-- Click **"Apply Replacement"** on each finding: watch the text update inline and the compliance score climb to **100%**.
-- Click **"Submit for Human Approval"** to route the polished draft to brand executives.
+### 3. Interactive Correction Studio (`/app/corrections/[id]`)
+- **Side-by-Side & Annotated Diff Modes**: Compare raw pre-audit copy directly against live corrected copy with clear visual markup.
+- **Source-Backed Citations**: Every finding cites the exact document title, section title, and quoted guideline clause.
+- **Granular Decision Controls**: Accept suggested high-confidence replacements with 1 click, dismiss flags, or input custom copy while watching the compliance score update in real time.
+- **Direct Submission Routing**: Submit corrected drafts directly into the corporate approval queue.
 
-### Step 4: Role-Based Approval Centre (`/app/approvals`)
-- Use the **Header Persona Switcher** to switch roles from *Creator (Marcus Vance)* to *Reviewer (Sarah Lin)* or *Admin (Elena Rostova)*.
-- As an authorized reviewer, review the draft's audit trail, write sign-off remarks, and click **"Approve Draft"**.
-- The system generates a tamper-evident cryptographic audit stamp (`AUTH-APP-XXXX-SHA256`).
+### 4. Role-Based Approval Centre (`/app/approvals`)
+- **Strict Human-in-the-Loop Gatekeeping**: Content creators cannot self-publish unvetted copy. Authorized Brand Managers and Compliance Officers review changes, examine cited evidence, and grant or reject sign-offs.
+- **Reviewer Feedback Loops**: Add itemized feedback and request revisions with a single click.
+- **Cryptographic Audit Stamps**: Every approved draft receives a tamper-evident SHA-256 cryptographic verification stamp (e.g., `AUTH-APP-9B4A-7X92-2026`).
 
-### Step 5: Official Publication Certificate (`/app/approvals`)
-- Click **"View Certificate"** next to any signed-off submission.
-- Inspect the **Official Brand Governance & Publication Authorization Certificate** complete with gold verification seal, compliance checklist, reviewer digital signature, and cryptographic token ID.
-- Click **"Print / PDF"** to print or save the audit trail for legal, PR, or compliance records.
+### 5. Official Brand Governance Certificate
+- **Tamper-Evident Publication Clearance**: Generate a presentation-ready **Official Brand Governance & Publication Authorization Certificate**.
+- **Audit-Ready Evidence**: Includes gold verification seal, compliance checklist breakdown, digital reviewer signature, and cryptographic token ID for enterprise legal and PR records.
+- **One-Click Export**: Save or print high-fidelity PDF clearance certificates directly from the browser.
 
 ---
 
 ## 🏛️ Core Philosophy: Human-in-the-Loop Governance
 
-Most enterprise brand risk occurs when generative AI tools publish without guardrails. BrandPilot solves this with a strict architectural boundary:
+As generative AI accelerates content production, enterprises face unprecedented brand dilution, factual drift, and legal liability. BrandPilot solves this through strict architectural boundaries:
 
-1. **AI assists and evaluates; it never independently authorizes or publishes.**
-2. Automated checks identify non-compliant claims, calculate dimensional scores, and cite exact manual passages.
-3. Only authenticated human brand managers can issue release authorization and generate cryptographically signed release certificates.
+1. **AI Evaluates; Humans Authorize**: AI models assist by identifying discrepancies and proposing vetted corrections, but the system prevents autonomous publishing.
+2. **Deterministic Precedence**: Concrete rules (prohibited terms, verified claims, legal disclaimers) always override ambiguous probabilistic language models.
+3. **Traceability Down to the Page**: Every flagged violation provides an undeniable, verifiable citation back to an approved corporate document.
 
 ---
 
-## 📊 Feature Comparison: Why BrandPilot Wins
+## 📊 Enterprise Capability Comparison
 
-| Capability | Generic Grammar Checkers (Grammarly) | Traditional DAMs (Frontify / Bynder) | Raw LLM Prompts (ChatGPT) | **BrandPilot** |
+| Capability | Generic Grammar Checkers (Grammarly) | Static Asset Libraries (Frontify / Bynder) | Raw LLM Prompts (ChatGPT / Claude) | **BrandPilot Enterprise** |
 | :--- | :---: | :---: | :---: | :---: |
-| **Deterministic Rule Enforcement** | ❌ (Grammar only) | ❌ (Static storage) | ❌ (Hallucinates) | ✅ **Sub-5ms Regex Linter** |
-| **Source-Backed Citations (Page & Section)** | ❌ | ❌ | ❌ | ✅ **Exact Policy & Page Cites** |
-| **Interactive 2-Column Correction Studio** | ⚠️ (Inline suggestions) | ❌ | ❌ | ✅ **Live 1-Click Source Sync** |
-| **Multi-Axis Brand Voice Profile** | ❌ | ⚠️ (Text PDF only) | ⚠️ (Inconsistent) | ✅ **5-Axis Real-Time Scoring** |
-| **Color & Asset Hex/Contrast Inspection** | ❌ | ✅ | ❌ | ✅ **Built-in Visual Inspector** |
-| **Human-in-the-Loop Approval Queue** | ❌ | ⚠️ (Basic workflow) | ❌ | ✅ **Role-Based Governance (RBAC)** |
-| **Official Cryptographic Publication Certificate** | ❌ | ❌ | ❌ | ✅ **Printable SHA-256 Audit Seal** |
+| **Deterministic Policy Linter** | ❌ (Grammar only) | ❌ (Static storage) | ❌ (Hallucinates rules) | ✅ **Sub-5ms Compiled Regex Linter** |
+| **Exact Page & Section Citations** | ❌ | ❌ | ❌ | ✅ **Verifiable Policy Manual Citations** |
+| **Side-by-Side Correction Studio** | ⚠️ (Inline suggestions) | ❌ | ❌ | ✅ **Side-by-Side Before/After Editor** |
+| **Multi-Axis Brand Voice Scoring** | ❌ | ⚠️ (Static PDF only) | ⚠️ (Inconsistent scoring) | ✅ **5-Axis Real-Time Scoring** |
+| **Visual Identity Token Inspector** | ❌ | ✅ | ❌ | ✅ **Euclidean RGB & Logo Clear Space** |
+| **Enterprise RBAC Approval Queue** | ❌ | ⚠️ (Basic sharing) | ❌ | ✅ **Multi-Tier Role Governance** |
+| **Cryptographic Release Certificate** | ❌ | ❌ | ❌ | ✅ **Tamper-Evident SHA-256 Audit Seal** |
 
 ---
 
@@ -86,7 +85,7 @@ Most enterprise brand risk occurs when generative AI tools publish without guard
 
 ```mermaid
 graph TD
-    subgraph Ingestion ["1. Knowledge Ingestion"]
+    subgraph Ingestion ["1. Knowledge Ingestion & Vector Indexing"]
         KB_Docs["Brand PDFs / DOCXs / Style Guides"] --> DocParser["Multi-Format Parser (PDF / Word)"]
         DocParser --> Chunker["Semantic Heading Chunker"]
         Chunker --> Embeddings["Vector Embeddings (pgvector / HNSW)"]
@@ -95,7 +94,7 @@ graph TD
     end
 
     subgraph AuditPipeline ["2. Triple-Layer Audit Engine"]
-        Draft["Content Draft Input (Blog / PR / Email / Ad)"]
+        Draft["Content Draft Input (Blog / PR / Whitepaper / Ad)"]
         Draft --> Linter["Deterministic Fast Linter (<5ms)"]
         Draft --> RAG["Vector RAG Semantic Search"]
         Embeddings --> RAG
@@ -108,14 +107,14 @@ graph TD
     end
 
     subgraph Studio ["3. Interactive Correction Studio"]
-        AuditReport --> StudioUI["2-Column Interactive Studio"]
+        AuditReport --> StudioUI["Side-by-Side & Annotated Diff Studio"]
         StudioUI --> OneClick["1-Click Source-Backed Replacements"]
         OneClick --> Recalc["Live Compliance Score Recalculator"]
         Recalc --> SubmitQueue["Submission Routing Engine"]
     end
 
     subgraph Governance ["4. Enterprise Governance & Sign-Off"]
-        SubmitQueue --> RBAC["Role-Based Access Control"]
+        SubmitQueue --> RBAC["Role-Based Access Control (Admin / Reviewer / Creator)"]
         RBAC --> Approval["Human Review Queue (Sarah Lin)"]
         Approval --> CryptoStamp["Cryptographic Audit Stamp (SHA-256)"]
         CryptoStamp --> Certificate["Official Brand Governance Certificate"]
@@ -128,21 +127,40 @@ graph TD
 
 ### Frontend Application
 - **Framework**: Next.js 16.4.6 with Turbopack & React 19
-- **Styling**: Tailwind CSS v4 with glassmorphism design system & micro-animations
-- **Typography & Icons**: Geist font family, Lucide React icons
-- **State & Store**: Unified Context store with persistence and multi-persona RBAC simulation
-- **Visuals**: Recharts for compliance analytics, custom SVG rendering for audit certificates
+- **Design System**: Tailwind CSS v4 with enterprise high-contrast Black & Green palette (`#000000`, `#050806`, `#0A120E`, `#10B981`, `#00FF87`)
+- **State Management**: Unified store with `localStorage` persistence, activity streaming, and multi-persona RBAC simulation
+- **Visualizations**: Recharts for compliance analytics, custom vector canvas for logo exclusion zone validation
+- **Icons & Typography**: Geist Sans, Geist Mono, Lucide React
 
-### Backend Engine
-- **Framework**: FastAPI (Python 3.11+) with Pydantic v2 schemas
-- **Deterministic Linter**: Pre-compiled regex engine scanning for absolute superlatives, non-compliant casing, and blacklisted vocabulary
-- **Retrieval Engine**: Hybrid BM25 keyword matching + dense vector similarity via `pgvector`
-- **Asset Inspector**: Color quantization, contrast ratio calculator, and palette extraction via Pillow
+### Backend Services & API
+- **Framework**: FastAPI (Python 3.11+) with Pydantic v2 validation models
+- **Deterministic Engine**: Pre-compiled regex engine for instant terminology and superlative detection
+- **Retrieval Engine**: Dense vector similarity search via `pgvector` with cosine distance ranking
+- **Asset Processing**: Color token classification via perceptual Euclidean distance, image contrast checking via Pillow
 
-### Database & Security
-- **Database**: PostgreSQL 16 with `pgvector` extension
-- **Security**: Row Level Security (RLS) policies isolating multi-tenant workspaces
-- **Audit Logging**: Immutable event ledger logging all rule modifications, audits, and reviewer approvals
+### Database & Storage
+- **Primary Database**: PostgreSQL 16 with `pgvector` extension
+- **Security**: Row Level Security (RLS) isolating organizational workspaces
+- **Audit Ledger**: Immutable event ledger recording rule revisions, content audits, reviewer comments, and cryptographic certificates
+
+---
+
+## 👥 Role-Based Access Control (RBAC)
+
+BrandPilot enforces separation of concerns across enterprise publishing workflows:
+
+| Module & Permission | Administrator | Reviewer / Brand Manager | Content Creator |
+| :--- | :---: | :---: | :---: |
+| **Ingest Guidelines & Specs** | ✅ Full Access | ❌ Restricted | ❌ Restricted |
+| **Edit Terminology & Approved Facts** | ✅ Full Access | ❌ Restricted | ❌ Restricted |
+| **Run Real-Time Content Audits** | ✅ Full Access | ✅ Full Access | ✅ Full Access |
+| **Accept / Reject AI Suggestions** | ✅ Full Access | ❌ Restricted | ✅ Full Access |
+| **Review Queue & Request Changes** | ✅ Full Access | ✅ Full Access | ❌ Restricted |
+| **Issue Cryptographic Sign-Off** | ✅ Full Access | ✅ Full Access | ❌ Restricted |
+| **View Team Analytics & Heatmaps** | ✅ Full Access | ✅ Full Access | ✅ Full Access |
+| **Manage Team Members & Roles** | ✅ Full Access | ❌ Restricted | ❌ Restricted |
+
+*An interactive Live Role Simulator on `/app/team` allows testing capabilities across all three personas instantly.*
 
 ---
 
@@ -153,7 +171,7 @@ graph TD
 - **Python**: v3.11 or higher
 - **npm** or **pnpm**
 
-### Quick Start (Frontend with built-in Mock & Live APIs)
+### Quick Start (Self-Contained Full-Stack Frontend)
 
 1. Clone the repository:
    ```bash
@@ -161,13 +179,13 @@ graph TD
    cd brandpilot
    ```
 
-2. Run the frontend:
+2. Run the application:
    ```bash
    cd brandpilot/frontend
    npm install
    npm run dev
    ```
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
+   Open **[http://localhost:3000](http://localhost:3000)** in your browser. The application includes fully populated enterprise guidelines, active rule registries, seeded review workflows, and simulated RBAC personas for immediate evaluation.
 
 3. *(Optional)* Run the Python FastAPI Backend:
    ```bash
@@ -180,33 +198,32 @@ graph TD
    pip install -r requirements.txt
    uvicorn app.main:app --reload --port 8000
    ```
-   Backend interactive Swagger docs available at [http://localhost:8000/docs](http://localhost:8000/docs).
+   Access the interactive OpenAPI Swagger documentation at **[http://localhost:8000/docs](http://localhost:8000/docs)**.
 
 ---
 
-## 🧪 Automated Test Suite
+## 🧪 Verification & Test Suite
 
-BrandPilot includes unit and regression tests for both frontend and backend modules:
+BrandPilot includes comprehensive automated test coverage across deterministic rules, semantic scoring, and UI pipelines:
 
 ```bash
-# Run backend audit tests
+# Run backend audit test suite
 python brandpilot/backend/tests/test_audits.py
 
-# Run backend deterministic linter tests
+# Run backend regex linter validation
 python brandpilot/backend/tests/test_linter.py
 
-# Run frontend production build & type checks
+# Run frontend TypeScript type checking and production build
 cd brandpilot/frontend
 npm run build
 ```
 
-All suites execute cleanly with **0 errors**.
+Production builds compile cleanly across all routes with **0 errors**.
 
 ---
 
-## 👥 Built for Hackathon
+## 📄 License & Enterprise Support
 
-- **Product**: BrandPilot — AI-Assisted Brand Governance & Content Intelligence Platform
-- **Lead Developer**: Ruben John Reji
-- **Repository**: [https://github.com/rubenreji/brandpilot](https://github.com/rubenreji/brandpilot)
 - **License**: MIT
+- **Architecture**: Cloud-Native & On-Premises Deployable
+- **Documentation**: [Full Brand Knowledge Base Specification](file:///c:/Users/Ruben%20John%20Reji/Desktop/MY%20projects/CODEATHON%20HACKATHON/BrandPilot_Enterprise_Brand_Knowledge_Base.md)

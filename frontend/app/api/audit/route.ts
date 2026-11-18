@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const wordCount = original_text.trim() ? original_text.trim().split(/\s+/).length : 0;
     const detectedFindings: any[] = [];
 
-    // Rule checks
+    // Comprehensive Rule registry
     const rules = [
       {
         pattern: /India'?s\s+No\.?\s*1/i,
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         repl: 'intelligent automated orchestration'
       },
       {
-        pattern: /guarantees\s+100%\s+accuracy/i,
+        pattern: /guarantees?\s+100%\s+accuracy/i,
         category: 'unsupported_claim',
         severity: 'critical',
         rule: 'Legal Compliance Standard: Prohibited Absolute Guarantees',
@@ -150,11 +150,17 @@ export async function POST(request: Request) {
       }
     ];
 
-    rules.forEach((item, idx) => {
-      const match = item.pattern.exec(original_text);
-      if (match) {
+    // Enumerate ALL matches per rule across the complete text
+    rules.forEach((item, ruleIdx) => {
+      const flags = item.pattern.flags.includes('g') ? item.pattern.flags : item.pattern.flags + 'g';
+      const globalRegex = new RegExp(item.pattern.source, flags);
+
+      let match: RegExpExecArray | null;
+      let matchCount = 0;
+      while ((match = globalRegex.exec(original_text)) !== null) {
+        matchCount++;
         detectedFindings.push({
-          id: `find-edge-${Date.now()}-${idx}`,
+          id: `find-edge-${Date.now()}-${ruleIdx}-${matchCount}-${match.index}`,
           submission_id: submissionId,
           category: item.category,
           severity: item.severity,
@@ -170,12 +176,32 @@ export async function POST(request: Request) {
           confidence: 0.98,
           status: 'pending'
         });
+
+        // Avoid infinite loop if regex matches empty string
+        if (match[0].length === 0) {
+          globalRegex.lastIndex++;
+        }
       }
     });
 
-    const criticalDeduction = detectedFindings.filter(f => f.severity === 'critical').length * 20;
-    const highDeduction = detectedFindings.filter(f => f.severity === 'high').length * 10;
-    const mediumDeduction = detectedFindings.filter(f => f.severity === 'medium').length * 5;
+    // Deduplicate findings if a broader regex captures the same span as a more specific one
+    const uniqueFindings: any[] = [];
+    const seenSpans = new Set<string>();
+    
+    // Sort findings by document appearance order
+    detectedFindings.sort((a, b) => a.start_index - b.start_index);
+
+    for (const f of detectedFindings) {
+      const spanKey = `${f.start_index}-${f.end_index}`;
+      if (!seenSpans.has(spanKey)) {
+        seenSpans.add(spanKey);
+        uniqueFindings.push(f);
+      }
+    }
+
+    const criticalDeduction = uniqueFindings.filter(f => f.severity === 'critical').length * 20;
+    const highDeduction = uniqueFindings.filter(f => f.severity === 'high').length * 10;
+    const mediumDeduction = uniqueFindings.filter(f => f.severity === 'medium').length * 5;
     const score = Math.max(12, 100 - (criticalDeduction + highDeduction + mediumDeduction));
 
     const submission = {
@@ -194,13 +220,13 @@ export async function POST(request: Request) {
       creator_name: 'Marcus Vance',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      findings_count: detectedFindings.length,
-      critical_count: detectedFindings.filter(f => f.severity === 'critical').length
+      findings_count: uniqueFindings.length,
+      critical_count: uniqueFindings.filter(f => f.severity === 'critical').length
     };
 
     return NextResponse.json({
       submission,
-      findings: detectedFindings,
+      findings: uniqueFindings,
       compliance_score: score
     });
   } catch (err: any) {

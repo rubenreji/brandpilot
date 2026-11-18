@@ -977,26 +977,35 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
       }
     ];
 
-    governanceRules.forEach(item => {
-      const match = item.pattern.exec(text);
-      if (match && !detected.some(f => Math.abs(f.start_index - match!.index) < 3)) {
-        detected.push({
-          id: `find-rule-${Date.now()}-${detected.length}`,
-          submission_id: activeSubId,
-          category: item.category,
-          severity: item.severity,
-          original_text: match[0],
-          start_index: match.index,
-          end_index: match.index + match[0].length,
-          explanation: item.expl,
-          relevant_brand_rule: item.rule,
-          source_document: 'AuraCloud Global Brand & Communication Manual v2.4',
-          page_reference: item.page,
-          exact_supporting_passage: item.passage,
-          suggested_correction: item.repl,
-          confidence: 0.98,
-          status: 'pending'
-        });
+    governanceRules.forEach((item, ruleIdx) => {
+      const flags = item.pattern.flags.includes('g') ? item.pattern.flags : item.pattern.flags + 'g';
+      const globalRegex = new RegExp(item.pattern.source, flags);
+      let match: RegExpExecArray | null;
+      let count = 0;
+      while ((match = globalRegex.exec(text)) !== null) {
+        count++;
+        if (!detected.some(f => Math.abs(f.start_index - match!.index) < 3)) {
+          detected.push({
+            id: `find-rule-${Date.now()}-${ruleIdx}-${count}-${match.index}`,
+            submission_id: activeSubId,
+            category: item.category,
+            severity: item.severity,
+            original_text: match[0],
+            start_index: match.index,
+            end_index: match.index + match[0].length,
+            explanation: item.expl,
+            relevant_brand_rule: item.rule,
+            source_document: 'AuraCloud Global Brand & Communication Manual v2.4',
+            page_reference: item.page,
+            exact_supporting_passage: item.passage,
+            suggested_correction: item.repl,
+            confidence: 0.98,
+            status: 'pending'
+          });
+        }
+        if (match[0].length === 0) {
+          globalRegex.lastIndex++;
+        }
       }
     });
 

@@ -264,6 +264,9 @@ class ContentRevision(BaseModel):
 class ApprovalAction(BaseModel):
     decision: str  # "approved", "changes_requested", "rejected"
     reviewer_comment: Optional[str] = None
+    reviewer_id: Optional[str] = "user-reviewer-1"
+    reviewer_name: Optional[str] = "Sarah Lin"
+    reviewer_role: Optional[str] = "reviewer"
 
 class ApprovalRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

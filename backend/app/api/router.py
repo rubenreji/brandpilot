@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
@@ -269,9 +269,14 @@ def apply_suggestion(finding_id: str, request: ApplySuggestionRequest):
         target_finding.status = SuggestionStatus.REJECTED
         target_finding.user_comment = request.comment or "Creator opted to preserve original draft"
 
-    # Re-evaluate compliance score
-    remaining_unresolved = [f for f in db.findings.get(target_submission.id, []) if f.status == SuggestionStatus.PENDING]
-    target_submission.compliance_score = AIAuditEngine.calculate_compliance_score(remaining_unresolved)
+    # Re-evaluate compliance score using complete finding history and accepted/rejected states
+    all_submission_findings = db.findings.get(target_submission.id, [])
+    target_submission.compliance_score = AIAuditEngine.calculate_compliance_score(all_submission_findings)
+    target_submission.findings_count = len([f for f in all_submission_findings if f.status != SuggestionStatus.ACCEPTED])
+    target_submission.critical_count = len([
+        f for f in all_submission_findings
+        if f.status != SuggestionStatus.ACCEPTED and f.severity.value in ["critical", "high"]
+    ])
     
     return {
         "status": "updated",
@@ -290,9 +295,16 @@ def get_approvals(org_id: str = "org-auracloud-001"):
     }
 
 @api_router.post("/approvals/{submission_id}/decision")
-def review_decision(submission_id: str, action: ApprovalAction):
+def review_decision(submission_id: str, action: ApprovalAction, x_user_role: Optional[str] = Header(None)):
     if submission_id not in db.submissions:
         raise HTTPException(status_code=404, detail="Submission not found")
+    
+    acting_role = (x_user_role or action.reviewer_role or "reviewer").lower()
+    if acting_role not in ["reviewer", "admin"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Segregation of duties policy prohibits content creators from approving submissions. Reviewer or Administrator authorization is required."
+        )
     
     sub = db.submissions[submission_id]
     
