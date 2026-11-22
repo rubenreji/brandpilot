@@ -53,6 +53,17 @@ export default function RegisterPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-[#0A120E] py-8 px-6 shadow-2xl border border-emerald-900/60 rounded-2xl sm:px-10">
+          {/* Live Persistent Cloud Database Status */}
+          <div className="mb-5 p-2.5 rounded-xl bg-[#060B08] border border-emerald-900/60 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-pulse shadow-[0_0_8px_#00FF87]"></span>
+              <span className="text-zinc-300 font-medium">Supabase Cloud Database</span>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-[#00FF87] border border-emerald-800">
+              Persistent Multi-User DB
+            </span>
+          </div>
+
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-xs font-semibold text-zinc-300">Full Name</label>

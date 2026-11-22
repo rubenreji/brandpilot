@@ -415,3 +415,129 @@ def get_demo_findings(submission_id: str):
             status=SuggestionStatus.PENDING
         )
     ]
+
+def get_all_demo_organizations():
+    return [
+        get_demo_organization(),
+        Organization(
+            id="org-fintrust-002",
+            name="FinTrust Wealth Management LLC",
+            brand_name="FinTrust",
+            industry="Global Investment Banking & Wealth Management",
+            description="SEC-registered algorithmic asset management and quantitative treasury solutions.",
+            website_url="https://fintrustwealth.com",
+            primary_color="#0B192C",
+            secondary_color="#1E3E62",
+            members_count=8
+        ),
+        Organization(
+            id="org-medipulse-003",
+            name="MediPulse Health AI Systems",
+            brand_name="MediPulse",
+            industry="Clinical AI Diagnostics & HealthTech",
+            description="FDA-cleared medical image analysis and automated clinical workflow intelligence.",
+            website_url="https://medipulsehealth.com",
+            primary_color="#082F49",
+            secondary_color="#0369A1",
+            members_count=6
+        ),
+        Organization(
+            id="org-cybershield-004",
+            name="CyberShield X Federal Systems",
+            brand_name="CyberShield X",
+            industry="Defense Cybersecurity & Zero-Trust Infrastructure",
+            description="FIPS 140-3 validated zero-trust security orchestration and sovereign SOC defense.",
+            website_url="https://cybershieldx.mil",
+            primary_color="#18181B",
+            secondary_color="#27272A",
+            members_count=5
+        ),
+        Organization(
+            id="org-aerospace-005",
+            name="AeroSpace Dynamics & Avionics Corp.",
+            brand_name="AeroSpace Dynamics",
+            industry="Commercial Aviation & Orbital Satellite Telemetry",
+            description="AS9100D aerospace avionics, satellite constellation telemetry, and sub-orbital launch guidance.",
+            website_url="https://aerospacedynamics.com",
+            primary_color="#0F172A",
+            secondary_color="#1E293B",
+            members_count=6
+        ),
+        Organization(
+            id="org-pulseenergy-006",
+            name="PulseEnergy CleanTech Grid Inc.",
+            brand_name="PulseEnergy",
+            industry="Renewable Smart Grids & Carbon Ledger Intelligence",
+            description="ISO 14064 verified renewable energy storage dispatch and auditable carbon accounting.",
+            website_url="https://pulseenergygrid.com",
+            primary_color="#052E16",
+            secondary_color="#166534",
+            members_count=4
+        ),
+        Organization(
+            id="org-quantumlogix-007",
+            name="QuantumLogix Systems Inc.",
+            brand_name="QuantumLogix",
+            industry="Post-Quantum Cryptography & Quantum Computing",
+            description="NIST post-quantum standardized encryption algorithms and fault-tolerant coprocessor runtimes.",
+            website_url="https://quantumlogix.tech",
+            primary_color="#1E1B4B",
+            secondary_color="#312E81",
+            members_count=5
+        ),
+        Organization(
+            id="org-biogenix-008",
+            name="BioGenix Molecular Therapeutics",
+            brand_name="BioGenix",
+            industry="Biotech mRNA Oncology & Precision Therapeutics",
+            description="Clinical-stage biotechnology enterprise pioneering synthetic mRNA therapeutics.",
+            website_url="https://biogenixtherapeutics.com",
+            primary_color="#14532D",
+            secondary_color="#15803D",
+            members_count=7
+        ),
+        Organization(
+            id="org-nexusretail-009",
+            name="Nexus Retail Omnichannel Systems",
+            brand_name="Nexus Retail",
+            industry="Omnichannel Commerce & Autonomous Checkout",
+            description="PCI-DSS Level 1 certified automated retail point-of-sale and privacy enclaves.",
+            website_url="https://nexusretailsystems.com",
+            primary_color="#1C1917",
+            secondary_color="#292524",
+            members_count=5
+        ),
+        Organization(
+            id="org-autodrive-010",
+            name="AutoDrive Mobility Technologies Inc.",
+            brand_name="AutoDrive",
+            industry="Automotive Autonomous Driving & Fleet Telematics",
+            description="ISO 26262 ASIL-D functional safety certified SAE Level 4 autonomous vehicle software.",
+            website_url="https://autodrivemobility.com",
+            primary_color="#0F172A",
+            secondary_color="#1E293B",
+            members_count=6
+        ),
+        Organization(
+            id="org-luxvanguard-011",
+            name="LuxVanguard Maison & Horlogerie",
+            brand_name="LuxVanguard",
+            industry="Haute Horlogerie & Ethical Luxury Goods",
+            description="Geneva-crafted mechanical chronometers and ethically sourced high-jewelry collections.",
+            website_url="https://luxvanguard.ch",
+            primary_color="#18181B",
+            secondary_color="#27272A",
+            members_count=4
+        ),
+        Organization(
+            id="org-veritaslegal-012",
+            name="Veritas Legal AI Technologies",
+            brand_name="Veritas Legal",
+            industry="Enterprise Legal Tech & Privilege Enclaves",
+            description="ABA Rule 1.1/1.6 compliant contract analysis, citation verification, and litigation discovery.",
+            website_url="https://veritaslegal.ai",
+            primary_color="#1E293B",
+            secondary_color="#334155",
+            members_count=5
+        )
+    ]

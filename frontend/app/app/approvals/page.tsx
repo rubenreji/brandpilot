@@ -19,8 +19,15 @@ import {
   Award,
   Printer,
   Copy,
-  Check
+  Check,
+  Send,
+  Globe,
+  ShieldAlert,
+  CheckCheck,
+  Loader2,
+  X
 } from 'lucide-react';
+import { PublishingDispatchResult } from '@/lib/types';
 
 export default function ApprovalCentrePage() {
   const {
@@ -30,7 +37,10 @@ export default function ApprovalCentrePage() {
     setCurrentRole,
     submissions,
     reviewSubmission,
-    approvalHistory
+    approvalHistory,
+    dispatchPublishing,
+    dispatchSlackAlert,
+    showToast
   } = useBrandPilot();
 
   const [filter, setFilter] = useState<'all' | 'in_review' | 'approved' | 'changes_requested'>('all');
@@ -44,6 +54,47 @@ export default function ApprovalCentrePage() {
   const [certSub, setCertSub] = useState<ContentSubmission | null>(null);
   const [copiedCert, setCopiedCert] = useState(false);
 
+  // Slack Incident Bot Simulator State
+  const [slackModalOpen, setSlackModalOpen] = useState(false);
+  const [slackSub, setSlackSub] = useState<ContentSubmission | null>(null);
+  const [slackChannel, setSlackChannel] = useState('#brand-safety-escalations');
+
+  const handleOpenSlackSimulator = (sub: ContentSubmission) => {
+    setSlackSub(sub);
+    setSlackModalOpen(true);
+  };
+
+  const handleDispatchSlackWebhook = async () => {
+    if (!slackSub) return;
+    await dispatchSlackAlert(slackSub.id, slackChannel);
+  };
+
+  // Closed-Loop CMS Publishing Gateway State
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishSub, setPublishSub] = useState<ContentSubmission | null>(null);
+  const [publishPlatform, setPublishPlatform] = useState('Webflow CMS');
+  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishResult, setPublishResult] = useState<PublishingDispatchResult | null>(null);
+
+  const handleOpenPublish = (sub: ContentSubmission) => {
+    setPublishSub(sub);
+    setPublishResult(null);
+    setPublishModalOpen(true);
+  };
+
+  const handleExecutePublish = async () => {
+    if (!publishSub) return;
+    setPublishLoading(true);
+    try {
+      const res = await dispatchPublishing(publishSub.id, publishPlatform);
+      setPublishResult(res);
+    } catch {
+      // Handled in store
+    } finally {
+      setPublishLoading(false);
+    }
+  };
+
   const handleOpenCertificate = (sub: ContentSubmission) => {
     setCertSub(sub);
     setCertModalOpen(true);
@@ -51,9 +102,10 @@ export default function ApprovalCentrePage() {
 
   const handleCopyCertLink = () => {
     if (typeof window !== 'undefined' && certSub) {
-      navigator.clipboard?.writeText(`https://brandpilot.ai/verify/AUTH-APP-${certSub.id.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase()}`);
+      navigator.clipboard?.writeText(`${window.location.origin}/verify/${certSub.id}`);
       setCopiedCert(true);
       setTimeout(() => setCopiedCert(false), 2000);
+      showToast('Public verification portal link copied to clipboard.', 'success');
     }
   };
 
@@ -71,8 +123,8 @@ export default function ApprovalCentrePage() {
       action === 'approved'
         ? 'Verified all factual statements against SLA specifications and Communication Manual Section 4.2. Approved for external distribution.'
         : action === 'changes_requested'
-        ? 'Please review paragraph 2: comparative superlatives must be removed before sign-off.'
-        : 'Violates core corporate communication policy.'
+          ? 'Please review paragraph 2: comparative superlatives must be removed before sign-off.'
+          : 'Violates core corporate communication policy.'
     );
     setDecisionModalOpen(true);
   };
@@ -229,11 +281,10 @@ export default function ApprovalCentrePage() {
           <button
             key={tab.id}
             onClick={() => setFilter(tab.id as any)}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${
-              filter === tab.id
-                ? 'bg-emerald-500 text-black font-extrabold shadow-sm'
-                : 'text-zinc-400 hover:text-white'
-            }`}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${filter === tab.id
+              ? 'bg-emerald-500 text-black font-extrabold shadow-sm'
+              : 'text-zinc-400 hover:text-white'
+              }`}
           >
             <span>{tab.label}</span>
             <span className={`font-mono text-[10px] ${filter === tab.id ? 'text-black' : 'text-zinc-500'}`}>({tab.count})</span>
@@ -268,106 +319,128 @@ export default function ApprovalCentrePage() {
               </tr>
             ) : (
               filteredSubs.map(sub => (
-              <tr key={sub.id} className="hover:bg-emerald-950/20 transition-colors">
-                <td className="py-4 px-4 max-w-sm">
-                  <Link
-                    href={`/app/corrections/${sub.id}`}
-                    className="font-bold text-white hover:text-[#00FF87] flex items-center gap-1"
-                  >
-                    <span>{sub.title}</span>
-                    <ExternalLink className="w-3 h-3 text-emerald-400" />
-                  </Link>
-                  <div className="text-[11px] text-zinc-400 mt-1 flex items-center gap-2">
-                    <span>By {sub.creator_name}</span>
-                    <span>•</span>
-                    <span>{sub.word_count} words</span>
-                    <span>•</span>
-                    <span>Submitted {new Date(sub.updated_at).toLocaleDateString()}</span>
-                  </div>
-                </td>
+                <tr key={sub.id} className="hover:bg-emerald-950/20 transition-colors">
+                  <td className="py-4 px-4 max-w-sm">
+                    <Link
+                      href={`/app/corrections/${sub.id}`}
+                      className="font-bold text-white hover:text-[#00FF87] flex items-center gap-1"
+                    >
+                      <span>{sub.title}</span>
+                      <ExternalLink className="w-3 h-3 text-emerald-400" />
+                    </Link>
+                    <div className="text-[11px] text-zinc-400 mt-1 flex items-center gap-2">
+                      <span>By {sub.creator_name}</span>
+                      <span>•</span>
+                      <span>{sub.word_count} words</span>
+                      <span>•</span>
+                      <span>Submitted {new Date(sub.updated_at).toLocaleDateString()}</span>
+                    </div>
+                  </td>
 
-                <td className="py-4 px-4">
-                  <span className="capitalize px-2 py-0.5 rounded bg-[#060B08] border border-emerald-950 text-emerald-400 font-mono text-[11px]">
-                    {sub.content_type.replace('_', ' ')}
-                  </span>
-                </td>
+                  <td className="py-4 px-4">
+                    <span className="capitalize px-2 py-0.5 rounded bg-[#060B08] border border-emerald-950 text-emerald-400 font-mono text-[11px]">
+                      {sub.content_type.replace('_', ' ')}
+                    </span>
+                  </td>
 
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-bold ${
-                        (sub.compliance_score ?? 0) >= 90
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`font-bold ${(sub.compliance_score ?? 0) >= 90
                           ? 'text-[#00FF87]'
                           : (sub.compliance_score ?? 0) >= 70
-                          ? 'text-amber-400'
-                          : 'text-rose-400'
-                      }`}
-                    >
-                      {sub.compliance_score ?? 0}%
-                    </span>
-                    <span className="text-[10px] text-zinc-500">
-                      ({sub.findings_count} findings)
-                    </span>
-                  </div>
-                </td>
+                            ? 'text-amber-400'
+                            : 'text-rose-400'
+                          }`}
+                      >
+                        {sub.compliance_score ?? 0}%
+                      </span>
+                      <span className="text-[10px] text-zinc-500">
+                        ({sub.findings_count} findings)
+                      </span>
+                    </div>
+                  </td>
 
-                <td className="py-4 px-4">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold text-[10px] uppercase border ${
-                      sub.status === 'approved'
+                  <td className="py-4 px-4">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold text-[10px] uppercase border ${sub.status === 'approved'
                         ? 'bg-emerald-950 text-[#00FF87] border-emerald-800'
                         : sub.status === 'in_review' || sub.status === 'pending_review'
-                        ? 'bg-amber-950 text-amber-300 border-amber-800'
-                        : sub.status === 'changes_requested'
-                        ? 'bg-rose-950 text-rose-300 border-rose-800'
-                        : 'bg-zinc-950 text-zinc-400 border-zinc-800'
-                    }`}
-                  >
-                    {sub.status === 'approved' && <CheckCircle2 className="w-3 h-3 text-[#00FF87]" />}
-                    {(sub.status === 'in_review' || sub.status === 'pending_review') && <Clock className="w-3 h-3 text-amber-400" />}
-                    {sub.status === 'changes_requested' && <AlertCircle className="w-3 h-3 text-rose-400" />}
-                    {sub.status.replace('_', ' ')}
-                  </span>
-                </td>
+                          ? 'bg-amber-950 text-amber-300 border-amber-800'
+                          : sub.status === 'changes_requested'
+                            ? 'bg-rose-950 text-rose-300 border-rose-800'
+                            : 'bg-zinc-950 text-zinc-400 border-zinc-800'
+                        }`}
+                    >
+                      {sub.status === 'approved' && <CheckCircle2 className="w-3 h-3 text-[#00FF87]" />}
+                      {(sub.status === 'in_review' || sub.status === 'pending_review') && <Clock className="w-3 h-3 text-amber-400" />}
+                      {sub.status === 'changes_requested' && <AlertCircle className="w-3 h-3 text-rose-400" />}
+                      {sub.status.replace('_', ' ')}
+                    </span>
+                  </td>
 
-                <td className="py-4 px-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {sub.status === 'approved' ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono text-[#00FF87] bg-emerald-950 border border-emerald-800 px-2 py-1 rounded">
-                          ✓ Signed Off
-                        </span>
-                        <button
-                          onClick={() => handleOpenCertificate(sub)}
-                          className="px-2.5 py-1 bg-emerald-950 border border-emerald-700 hover:bg-emerald-900/80 text-[#00FF87] rounded font-semibold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shadow-[0_0_10px_rgba(0,255,135,0.2)]"
-                          title="View Official Compliance Certificate"
-                        >
-                          <Award className="w-3.5 h-3.5 text-[#00FF87]" />
-                          <span>View Certificate</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          disabled={currentRole === 'creator'}
-                          onClick={() => handleOpenDecision(sub, 'changes_requested')}
-                          className="px-2.5 py-1 text-zinc-300 hover:text-white hover:bg-emerald-950/40 rounded border border-emerald-900/60 disabled:opacity-40 transition-colors font-semibold cursor-pointer"
-                        >
-                          Request Changes
-                        </button>
-                        <button
-                          disabled={currentRole === 'creator'}
-                          onClick={() => handleOpenDecision(sub, 'approved')}
-                          className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-black rounded font-extrabold disabled:opacity-40 shadow-sm transition-colors cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.35)]"
-                        >
-                          Approve Draft
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            )))}
+                  <td className="py-4 px-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {sub.status === 'approved' ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-mono text-[#00FF87] bg-emerald-950 border border-emerald-800 px-2 py-1 rounded">
+                            ✓ Signed Off
+                          </span>
+                          <button
+                            onClick={() => handleOpenCertificate(sub)}
+                            className="px-2.5 py-1 bg-emerald-950 border border-emerald-700 hover:bg-emerald-900/80 text-[#00FF87] rounded font-semibold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shadow-[0_0_10px_rgba(0,255,135,0.2)]"
+                            title="View Official Compliance Certificate"
+                          >
+                            <Award className="w-3.5 h-3.5 text-[#00FF87]" />
+                            <span>Certificate</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenPublish(sub)}
+                            className="px-2.5 py-1 bg-gradient-to-r from-teal-900 to-emerald-950 border border-teal-600 hover:border-teal-400 text-teal-300 rounded font-semibold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                            title="Publish to Production CMS Gateway"
+                          >
+                            <Globe className="w-3.5 h-3.5 text-teal-400" />
+                            <span>Publish to CMS</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleOpenPublish(sub)}
+                            className="px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-amber-950/30 rounded border border-zinc-800 text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Test Gatekeeper Security Rejection"
+                          >
+                            <ShieldAlert className="w-3 h-3 text-amber-400" />
+                            <span>Gatekeeper Test</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenSlackSimulator(sub)}
+                            className="px-2 py-1 text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/30 rounded border border-zinc-800 text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Simulate Slack Incident Webhook Alert"
+                          >
+                            <MessageSquare className="w-3 h-3 text-emerald-400" />
+                            <span>Slack Bot</span>
+                          </button>
+                          <button
+                            disabled={currentRole === 'creator'}
+                            onClick={() => handleOpenDecision(sub, 'changes_requested')}
+                            className="px-2.5 py-1 text-zinc-300 hover:text-white hover:bg-emerald-950/40 rounded border border-emerald-900/60 disabled:opacity-40 transition-colors font-semibold cursor-pointer"
+                          >
+                            Request Changes
+                          </button>
+                          <button
+                            disabled={currentRole === 'creator'}
+                            onClick={() => handleOpenDecision(sub, 'approved')}
+                            className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-black rounded font-extrabold disabled:opacity-40 shadow-sm transition-colors cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                          >
+                            Approve Draft
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )))}
           </tbody>
         </table>
       </div>
@@ -403,13 +476,12 @@ export default function ApprovalCentrePage() {
                       {rec.submission_title || 'Enterprise Document'}
                     </span>
                     <span
-                      className={`text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full border ${
-                        rec.decision === 'approved'
-                          ? 'bg-emerald-950 text-[#00FF87] border-emerald-800'
-                          : rec.decision === 'changes_requested'
+                      className={`text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full border ${rec.decision === 'approved'
+                        ? 'bg-emerald-950 text-[#00FF87] border-emerald-800'
+                        : rec.decision === 'changes_requested'
                           ? 'bg-amber-950 text-amber-300 border-amber-800'
                           : 'bg-rose-950 text-rose-300 border-rose-800'
-                      }`}
+                        }`}
                     >
                       {rec.decision.replace('_', ' ')}
                     </span>
@@ -451,8 +523,8 @@ export default function ApprovalCentrePage() {
                   {reviewAction === 'approved'
                     ? 'Sign Off & Approve for Publication'
                     : reviewAction === 'changes_requested'
-                    ? 'Request Changes from Content Author'
-                    : 'Reject Submission'}
+                      ? 'Request Changes from Content Author'
+                      : 'Reject Submission'}
                 </h3>
               </div>
               <button
@@ -532,9 +604,8 @@ export default function ApprovalCentrePage() {
               <button
                 type="button"
                 onClick={handleConfirmDecision}
-                className={`px-4 py-2 text-black text-xs font-extrabold rounded-lg shadow-md cursor-pointer transition-all ${
-                  reviewAction === 'approved' ? 'bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]' : 'bg-rose-500 hover:bg-rose-400 text-white'
-                }`}
+                className={`px-4 py-2 text-black text-xs font-extrabold rounded-lg shadow-md cursor-pointer transition-all ${reviewAction === 'approved' ? 'bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]' : 'bg-rose-500 hover:bg-rose-400 text-white'
+                  }`}
               >
                 Confirm {reviewAction === 'approved' ? 'Approval' : 'Changes'}
               </button>
@@ -669,15 +740,36 @@ export default function ApprovalCentrePage() {
 
             {/* Pinned Modal Footer */}
             <div className="p-3 sm:p-4 border-t border-emerald-950 bg-[#060B08] shrink-0 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={handleCopyCertLink}
-                className="px-3 py-1.5 rounded-lg border border-emerald-900/60 text-zinc-200 hover:bg-emerald-950/40 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {copiedCert ? <Check className="w-3.5 h-3.5 text-[#00FF87]" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
-                <span>{copiedCert ? 'ID Copied!' : 'Copy Verification ID'}</span>
-              </button>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyCertLink}
+                  className="px-3 py-1.5 rounded-lg border border-emerald-900/60 text-zinc-200 hover:bg-emerald-950/40 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedCert ? <Check className="w-3.5 h-3.5 text-[#00FF87]" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
+                  <span>{copiedCert ? 'Link Copied!' : 'Copy Portal Link'}</span>
+                </button>
+                <Link
+                  href={`/verify/${certSub.id}`}
+                  target="_blank"
+                  className="px-3 py-1.5 rounded-lg border border-emerald-700/80 bg-emerald-950/60 hover:bg-emerald-900 text-[#00FF87] font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Public Portal</span>
+                </Link>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCertModalOpen(false);
+                    if (certSub) handleOpenPublish(certSub);
+                  }}
+                  className="px-3.5 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black rounded-lg font-extrabold text-xs flex items-center gap-1.5 transition-colors shadow-md cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5 text-black" />
+                  <span>Publish to CMS</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -696,6 +788,304 @@ export default function ApprovalCentrePage() {
                   Done
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- CLOSED-LOOP CMS PUBLISHING GATEWAY MODAL (ROUND 3 ADVANCED GATEKEEPING) --- */}
+      {publishModalOpen && publishSub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="bg-[#0A120E] border border-teal-500/40 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-emerald-950 bg-gradient-to-r from-teal-950/40 via-[#0A120E] to-emerald-950/30 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    Production CMS Gateway & Publishing Dispatcher
+                    <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40">
+                      Zero-Leakage Gated
+                    </span>
+                  </h2>
+                  <p className="text-xs text-zinc-400">
+                    Dispatch approved copy to production channels. Unapproved collateral is blocked by automated cryptographic gating.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPublishModalOpen(false)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-emerald-950/60"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-5 text-xs text-zinc-300">
+              {/* Target Draft Information */}
+              <div className="p-3.5 rounded-xl bg-[#060B08] border border-emerald-900/60 flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-mono uppercase text-zinc-500">Target Content Draft</div>
+                  <div className="text-sm font-bold text-white">{publishSub.title}</div>
+                  <div className="text-[11px] text-zinc-400">
+                    Format: <span className="text-emerald-400 font-medium">{publishSub.content_type}</span> • Status:{' '}
+                    <span
+                      className={`font-mono font-bold uppercase ${publishSub.status === 'approved' ? 'text-[#00FF87]' : 'text-amber-400'
+                        }`}
+                    >
+                      {publishSub.status}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-mono uppercase text-zinc-500">Compliance Score</div>
+                  <div className="text-lg font-mono font-black text-[#00FF87]">{publishSub.compliance_score}%</div>
+                </div>
+              </div>
+
+              {/* Destination Platform Picker */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Destination Publishing Gateway</label>
+                <select
+                  value={publishPlatform}
+                  onChange={e => setPublishPlatform(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-emerald-900/60 rounded-lg bg-[#050806] text-white focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="Webflow CMS">Webflow CMS (Corporate Marketing Blog)</option>
+                  <option value="WordPress Production">WordPress Enterprise (Public Press Releases)</option>
+                  <option value="Ghost Publishing">Ghost Headless Engine (Developer Documentation)</option>
+                  <option value="HubSpot Campaigns">HubSpot Marketing Hub (Email & Landing Pages)</option>
+                  <option value="Notion Workspace">Notion Internal Wiki (Product Playbooks)</option>
+                </select>
+              </div>
+
+              {/* Execution Loading */}
+              {publishLoading && (
+                <div className="p-4 rounded-xl bg-teal-950/30 border border-teal-900/80 flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-teal-400 shrink-0" />
+                  <div className="text-xs">
+                    <div className="font-bold text-white">Performing Cryptographic Security Handshake...</div>
+                    <div className="text-zinc-400 text-[11px]">Validating SHA-256 seal against Human Approval Ledger...</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Execution Result - BLOCKED (Security Gatekeeper) */}
+              {publishResult && publishResult.status === 'BLOCKED' && (
+                <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-600 space-y-2">
+                  <div className="flex items-center gap-2 text-rose-300 font-bold text-xs">
+                    <ShieldAlert className="w-4 h-4 text-rose-400" />
+                    <span>GATEKEEPER REJECTION: HTTP 403 Forbidden</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-300 leading-relaxed font-mono bg-black/40 p-2.5 rounded border border-rose-950">
+                    {publishResult.error || 'Content lacks verified human reviewer sign-off.'}
+                  </div>
+                  <div className="text-[10px] text-rose-400">
+                    Zero-Leakage Assurance: Unapproved marketing or press collateral is physically prevented from reaching production CMS endpoints.
+                  </div>
+                </div>
+              )}
+
+              {/* Execution Result - SUCCESS */}
+              {publishResult && publishResult.status === 'DISPATCHED_LIVE' && (
+                <div className="p-4 rounded-xl bg-emerald-950/40 border border-[#00FF87]/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[#00FF87] font-bold text-xs">
+                      <CheckCheck className="w-4 h-4 text-[#00FF87]" />
+                      <span>Cryptographic Dispatch Verified & Live!</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-300 bg-emerald-900/60 px-2 py-0.5 rounded border border-emerald-700">
+                      200 OK • Live
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-[11px] bg-black/40 p-3 rounded-lg border border-emerald-900/80 font-mono">
+                    <div>
+                      <span className="text-zinc-500">Destination:</span>{' '}
+                      <span className="text-white font-bold">{publishResult.platform}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">Clearance Seal:</span>{' '}
+                      <span className="text-emerald-400 font-bold">{publishResult.clearance_stamp}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">HMAC Handshake:</span>{' '}
+                      <span className="text-zinc-300">{publishResult.hmac_security_digest}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">Live URL:</span>{' '}
+                      <a
+                        href={publishResult.published_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-teal-400 underline hover:text-teal-300"
+                      >
+                        {publishResult.published_url}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-emerald-950 bg-[#060B08] shrink-0 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setPublishModalOpen(false)}
+                className="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white"
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                disabled={publishLoading}
+                onClick={handleExecutePublish}
+                className={`px-4 py-2 rounded-lg text-xs font-extrabold flex items-center gap-2 cursor-pointer transition-all ${publishSub.status === 'approved'
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black shadow-md shadow-teal-500/20'
+                  : 'bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-700'
+                  }`}
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>
+                  {publishLoading
+                    ? 'Transmitting...'
+                    : publishSub.status === 'approved'
+                      ? `Dispatch to ${publishPlatform.split(' ')[0]}`
+                      : 'Attempt Publish (Test Gatekeeper)'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SLACK INCIDENT BOT SIMULATOR MODAL (ENTERPRISE INCIDENT ESCALATION) --- */}
+      {slackModalOpen && slackSub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="bg-[#1A1D21] border border-zinc-700 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-zinc-200 animate-in fade-in zoom-in-95 duration-200 font-sans">
+            {/* Slack Window Header */}
+            <div className="p-3 bg-[#121016] border-b border-zinc-800 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                <span className="ml-2 font-bold text-white flex items-center gap-1.5 font-mono">
+                  #brand-safety-escalations • Slack Block Kit Incident Card
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSlackModalOpen(false)}
+                className="text-zinc-400 hover:text-white p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Simulated Slack Message Stream */}
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Bot Identity Header */}
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400 text-sm shrink-0">
+                  BP
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-xs">BrandPilot Compliance Bot</span>
+                    <span className="bg-zinc-800 text-zinc-400 text-[10px] px-1.5 py-0.2 rounded font-mono">APP</span>
+                    <span className="text-[10px] text-zinc-500">Today at 11:42 PM</span>
+                  </div>
+
+                  {/* Slack Block Kit Attachment Card */}
+                  <div className="p-4 rounded-xl bg-[#222529] border-l-4 border-l-rose-500 border border-zinc-700/80 space-y-3 text-xs">
+                    <div className="font-extrabold text-white text-sm flex items-center gap-1.5">
+                      <span>🚨 Brand Governance Incident Alert</span>
+                      <span className="text-[10px] font-mono text-rose-300 bg-rose-950 px-2 py-0.5 rounded border border-rose-800 uppercase">
+                        CRITICAL SEVERITY
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] bg-black/30 p-2.5 rounded-lg border border-zinc-800 font-mono">
+                      <div>
+                        <span className="text-zinc-400">Submission:</span>{' '}
+                        <span className="text-white font-bold">{slackSub.title}</span>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400">Status:</span>{' '}
+                        <span className="text-amber-400 font-bold uppercase">{slackSub.status}</span>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400">Compliance:</span>{' '}
+                        <span className="text-rose-400 font-bold">{slackSub.compliance_score}%</span>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400">Incident ID:</span>{' '}
+                        <span className="text-emerald-400 font-bold">INC-9481-BP</span>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-zinc-300 leading-relaxed space-y-1">
+                      <p>• <span className="font-bold text-rose-400">SLA Violation:</span> Verbal/written claim stating '100% uptime' exceeds approved 99.95% SLA bound.</p>
+                      <p>• <span className="font-bold text-amber-400">Prohibited Term:</span> Marketing buzzword 'AI magic' detected (Policy Standard 3.4).</p>
+                      <p>• <span className="font-bold text-teal-400">Segregation of Duties:</span> Dispatches to live production CMS are physically locked.</p>
+                    </div>
+
+                    {/* Interactive Slack Action Buttons */}
+                    <div className="pt-2 border-t border-zinc-700/60 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSlackModalOpen(false);
+                          handleOpenDecision(slackSub, 'approved');
+                        }}
+                        className="px-3 py-1.5 bg-[#007A5A] hover:bg-[#148567] text-white font-bold text-xs rounded shadow transition-colors cursor-pointer"
+                      >
+                        Approve via Bot
+                      </button>
+
+                      <Link
+                        href={`/app/corrections/${slackSub.id}`}
+                        onClick={() => setSlackModalOpen(false)}
+                        className="px-3 py-1.5 bg-[#1264A3] hover:bg-[#005A9E] text-white font-bold text-xs rounded shadow transition-colors cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <span>Open in Studio</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          showToast('Incident escalated to General Counsel and PR Legal Reviewers.', 'info');
+                          setSlackModalOpen(false);
+                        }}
+                        className="px-3 py-1.5 bg-[#E01E5A] hover:bg-[#D71450] text-white font-bold text-xs rounded shadow transition-colors cursor-pointer"
+                      >
+                        Escalate to Legal
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-[#121016] border-t border-zinc-800 shrink-0 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-zinc-500 font-mono">
+                Webhook URL: https://hooks.slack.com/services/T00/B00/X00
+              </span>
+              <button
+                type="button"
+                onClick={handleDispatchSlackWebhook}
+                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs rounded transition-colors cursor-pointer"
+              >
+                Send Test Webhook
+              </button>
             </div>
           </div>
         </div>

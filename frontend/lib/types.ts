@@ -139,6 +139,7 @@ export interface ToneProfile {
   target_audience?: string;
   preferred_sentence_style?: string;
   words_to_avoid?: string[];
+  tone_keywords?: string[];
   example_approved_content?: string;
 }
 
@@ -156,6 +157,27 @@ export interface BrandAsset {
   is_primary?: boolean;
   status?: string;
   created_at?: string;
+  uploaded_at?: string;
+}
+
+export interface VerifiedClaim {
+  id: string;
+  claim_text: string;
+  status: 'supported' | 'contradicted' | 'cannot_be_verified';
+  confidence: number;
+  explanation: string;
+  relevant_source?: string;
+  exact_passage?: string;
+  suggested_correction?: string;
+}
+
+export interface ClaimVerificationSummary {
+  total_claims_analyzed: number;
+  supported_count: number;
+  contradicted_count: number;
+  unverified_count: number;
+  integrity_score: number;
+  claims: VerifiedClaim[];
 }
 
 export interface ComplianceFinding {
@@ -175,6 +197,10 @@ export interface ComplianceFinding {
   confidence: number;
   status: SuggestionStatus;
   user_comment?: string;
+  verification_status?: 'supported' | 'contradicted' | 'cannot_be_verified' | 'unverified';
+  claim_type?: string;
+  context_reasoning?: string;
+  grounded_evidence?: string;
 }
 
 export interface ContentSubmission {
@@ -197,6 +223,7 @@ export interface ContentSubmission {
   updated_at: string;
   findings_count: number;
   critical_count: number;
+  claim_verification_summary?: ClaimVerificationSummary;
 }
 
 export interface ContentRevision {
@@ -260,3 +287,346 @@ export interface AuditResultResponse {
   findings: ComplianceFinding[];
   compliance_score: number;
 }
+
+export interface AutoExtractResult {
+  status: string;
+  source_title: string;
+  extracted_rules_count: number;
+  extracted_facts_count: number;
+  rules: any[];
+  facts: any[];
+  tone_calibration: Record<string, any>;
+  design_tokens: {
+    primary_color: string;
+    secondary_color: string;
+    accent_color: string;
+    logo_exclusion_space: string;
+  };
+  elapsed_ms: number;
+}
+
+export interface PublishingDispatchResult {
+  status: 'DISPATCHED_LIVE' | 'BLOCKED';
+  dispatch_id?: string;
+  submission_id: string;
+  title: string;
+  platform: string;
+  destination_channel: string;
+  clearance_stamp: string;
+  reviewer_name: string;
+  published_url: string;
+  hmac_security_digest: string;
+  timestamp: string;
+  message: string;
+  error?: string;
+}
+
+export interface InSituIssue {
+  original_text: string;
+  start_index: number;
+  end_index: number;
+  suggested_replacement: string;
+  category: string;
+  severity: string;
+  rule_name: string;
+}
+
+export interface InSituLintResult {
+  status: string;
+  latency_ms: number;
+  issues_count: number;
+  compliance_score: number;
+  issues: InSituIssue[];
+  wcag_contrast?: {
+    foreground: string;
+    background: string;
+    estimated_contrast: string;
+    wcag_aa_pass: boolean;
+    wcag_aaa_pass: boolean;
+  };
+}
+
+export interface SpokenFinding {
+  timestamp_sec: number;
+  timestamp_display: string;
+  original_speech: string;
+  suggested_teleprompter_speech: string;
+  rule_name: string;
+  severity: string;
+  category: string;
+  jurisdiction?: string;
+  explanation: string;
+}
+
+export interface MultimodalSpeechResult {
+  status: string;
+  title: string;
+  media_type: string;
+  speaker_role: string;
+  jurisdiction: string;
+  compliance_score: number;
+  word_count: number;
+  duration_seconds: number;
+  speech_pacing_wpm: number;
+  formality_score: number;
+  spoken_findings_count: number;
+  spoken_findings: SpokenFinding[];
+  teleprompter_clean_script: string;
+  latency_ms: number;
+}
+
+export interface SlackAlertResult {
+  status: string;
+  channel: string;
+  delivered_at: string;
+  block_kit_payload: any;
+}
+
+export interface PublicVerificationRecord {
+  is_verified: boolean;
+  status: string;
+  submission_id: string;
+  title: string;
+  content_text: string;
+  compliance_score: number;
+  reviewer_name: string;
+  reviewer_role: string;
+  approval_timestamp: string;
+  cryptographic_stamp: string;
+  sha256_document_digest: string;
+  active_guideline_version: string;
+  tamper_proof_seal: string;
+  organization_name: string;
+}
+
+export interface CompetitorVulnerability {
+  matched_claim: string;
+  claim?: string;
+  vulnerability_type: string;
+  vulnerability?: string;
+  legal_risk: string;
+  statutory_statute: string;
+  statutory_reference?: string;
+  suggested_counter_rebuttal: string;
+  counter_rebuttal?: string;
+  fact_source?: string;
+  severity?: 'critical' | 'high' | 'medium';
+}
+
+export interface CompetitorScanResult {
+  status: string;
+  competitor_name: string;
+  vulnerability_score: number;
+  vulnerabilities_count: number;
+  vulnerabilities: CompetitorVulnerability[];
+  executive_summary: string;
+  jurisdiction?: string;
+  elapsed_ms: number;
+}
+
+export interface EnterpriseSystemStatus {
+  status: string;
+  platform_version: string;
+  deployment_region: string;
+  available_regions: string[];
+  data_residency_compliance: string;
+  zero_data_retention_active: boolean;
+  zero_data_retention_policy: string;
+  uptime_sla_percentage: number;
+  immutable_ledger_status: string;
+  active_organizations: number;
+  active_rules_cached: number;
+  active_facts_verified: number;
+  timestamp: string;
+}
+
+export interface WebhookTestPingResult {
+  status: string;
+  http_response_code: number;
+  latency_ms: number;
+  target_url: string;
+  event_type: string;
+  signature_header: string;
+  payload_dispatched: any;
+  message: string;
+}
+
+export interface EnterpriseApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  full_key?: string;
+  scopes: string[];
+  created_at: string;
+  last_used_at: string;
+  status: 'active' | 'revoked';
+}
+
+export interface EnterpriseInvoice {
+  id: string;
+  date: string;
+  amount: string;
+  status: string;
+  description: string;
+  pdf_url?: string;
+}
+
+export interface SubscriptionUsage {
+  plan_tier: string;
+  plan_status: string;
+  billing_period: string;
+  renewal_date: string;
+  seats_allocated: number;
+  seats_used: number;
+  usage_meters: {
+    monthly_audits: { used: number; quota: number; percentage: number };
+    insitu_api_calls: { used: number; quota: number; percentage: number };
+    brand_guidelines: { used: number; quota: string };
+    custom_domains: { used: number; quota: number };
+  };
+  payment_method: {
+    brand: string;
+    last4: string;
+    exp_month: number;
+    exp_year: number;
+  };
+  billing_contact: {
+    name: string;
+    email: string;
+    tax_id: string;
+  };
+  invoices: EnterpriseInvoice[];
+}
+
+export interface BrandBaseDefinition {
+  workspace: Organization;
+  icon: string;
+  badge: string;
+  guidelines: BrandGuideline[];
+  facts: ApprovedFact[];
+  terminology: TerminologyRule[];
+  tone: ToneProfile;
+  assets: BrandAsset[];
+  sampleDraft: {
+    name: string;
+    headline: string;
+    contentType: string;
+    campaign: string;
+    targetAudience: string;
+    jurisdiction: 'global' | 'us_ftc' | 'eu_ai_act' | 'uk_asa';
+    flaggedBody: string;
+    compliantBody: string;
+  };
+}
+
+// --- ADVANCED VISUAL BRAND COMPLIANCE & DESIGN INSPECTION TYPES ---
+
+export interface VisualBoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  x_pct: number;
+  y_pct: number;
+  w_pct: number;
+  h_pct: number;
+}
+
+export type VisualFindingCategory =
+  | 'color_divergence'
+  | 'logo_distortion'
+  | 'logo_clearance'
+  | 'embedded_text_violation'
+  | 'contrast_accessibility'
+  | 'visual_processing_error';
+
+export interface VisualFinding {
+  id: string;
+  category: VisualFindingCategory | string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  detected_value?: string;
+  recommended_value?: string;
+  bounding_box?: VisualBoundingBox;
+  wcag_level?: string;
+  remediation_action?: string;
+}
+
+export interface ColorClusterInfo {
+  hex: string;
+  percentage: number;
+  is_compliant: boolean;
+  nearest_token?: string;
+  distance?: number;
+  role?: string;
+  bounding_box?: VisualBoundingBox;
+}
+
+export interface LogoInspectionDetails {
+  detected: boolean;
+  confidence: number;
+  aspect_ratio: number;
+  expected_aspect_ratio: number;
+  aspect_distortion_pct: number;
+  is_distorted: boolean;
+  clear_space_passed: boolean;
+  clear_space_margin_ratio: number;
+  required_margin_ratio: number;
+  bounding_box?: VisualBoundingBox;
+  exclusion_zone_box?: VisualBoundingBox;
+}
+
+export interface ContrastCheckZone {
+  zone_name: string;
+  foreground_hex: string;
+  background_hex: string;
+  contrast_ratio: number;
+  wcag_aa_pass: boolean;
+  wcag_aaa_pass: boolean;
+  is_large_text?: boolean;
+  bounding_box?: VisualBoundingBox;
+}
+
+export interface OCRTextFinding {
+  extracted_text: string;
+  line_number: number;
+  bounding_box?: VisualBoundingBox;
+  violations_count: number;
+  findings?: any[];
+}
+
+export interface VisualInspectionScoreBreakdown {
+  color_palette_score: number;
+  logo_integrity_score: number;
+  embedded_copy_score: number;
+  wcag_contrast_score: number;
+  composite_score: number;
+  compliance_grade: string;
+}
+
+export interface VisualInspectionReport {
+  status: 'success' | 'error';
+  asset_dimensions: string;
+  image_preview_url?: string;
+  score: VisualInspectionScoreBreakdown;
+  findings: VisualFinding[];
+  dominant_colors: ColorClusterInfo[];
+  logo_inspection: LogoInspectionDetails;
+  wcag_contrast_checks: ContrastCheckZone[];
+  ocr_extracted_copy: OCRTextFinding[];
+  limitations_note: string;
+}
+
+export interface VisualPreset {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  expected_score: number;
+  status: 'compliant' | 'non_compliant';
+}
+
+
+
+

@@ -96,49 +96,31 @@ const PERMISSION_MATRIX: PermissionRow[] = [
 ];
 
 export default function TeamPage() {
-  const { currentWorkspace, currentRole, setCurrentRole, showToast } = useBrandPilot();
-
-  const [members, setMembers] = useState([
-    {
-      id: 'm1',
-      name: 'Elena Rostova',
-      email: 'elena.rostova@auracloud.io',
-      role: 'admin' as UserRole,
-      title: 'VP of Brand & Corporate Governance'
-    },
-    {
-      id: 'm2',
-      name: 'Sarah Lin',
-      email: 'sarah.lin@auracloud.io',
-      role: 'reviewer' as UserRole,
-      title: 'Senior Brand Manager'
-    },
-    {
-      id: 'm3',
-      name: 'Marcus Vance',
-      email: 'marcus.vance@auracloud.io',
-      role: 'creator' as UserRole,
-      title: 'Content & Technical Marketing Lead'
-    }
-  ]);
+  const {
+    currentWorkspace,
+    currentRole,
+    setCurrentRole,
+    currentUser,
+    switchAccount,
+    teamMembers,
+    inviteTeamMember,
+    updateMemberRole,
+    showToast,
+    isSupabaseActive,
+    dbSyncStatus
+  } = useBrandPilot();
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [newInvite, setNewInvite] = useState({ name: '', email: '', role: 'creator' as UserRole });
 
-  const handleInvite = (e: React.FormEvent) => {
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newInvite.email) return;
-    setMembers([
-      ...members,
-      {
-        id: `m-${Date.now()}`,
-        name: newInvite.name || newInvite.email.split('@')[0],
-        email: newInvite.email,
-        role: newInvite.role,
-        title: 'Team Member'
-      }
-    ]);
-    showToast(`Invited ${newInvite.email} as ${newInvite.role}!`, 'success');
+    await inviteTeamMember({
+      name: newInvite.name || newInvite.email.split('@')[0],
+      email: newInvite.email,
+      role: newInvite.role
+    });
     setIsInviteOpen(false);
     setNewInvite({ name: '', email: '', role: 'creator' });
   };
@@ -183,15 +165,23 @@ export default function TeamPage() {
           </p>
         </div>
 
-        {currentRole === 'admin' && (
-          <button
-            onClick={() => setIsInviteOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all shadow-[0_0_16px_rgba(16,185,129,0.35)] cursor-pointer"
-          >
-            <UserPlus className="w-3.5 h-3.5 text-black" />
-            <span>Invite Colleague</span>
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#060B08] border border-emerald-900/60 text-xs">
+            <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-pulse shadow-[0_0_8px_#00FF87]"></span>
+            <span className="text-zinc-400 font-medium">Supabase Cloud:</span>
+            <span className="font-bold text-[#00FF87]">Persistent RBAC ({dbSyncStatus.toUpperCase()})</span>
+          </div>
+
+          {currentRole === 'admin' && (
+            <button
+              onClick={() => setIsInviteOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all shadow-[0_0_16px_rgba(16,185,129,0.35)] cursor-pointer"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-black" />
+              <span>Invite Colleague</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Live Role Simulator & Active Persona Banner */}
@@ -377,10 +367,10 @@ export default function TeamPage() {
         <div className="p-4 sm:p-5 border-b border-emerald-950 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-black text-white">Active Organization Roster</h2>
-            <p className="text-xs text-zinc-400">Team members provisioned in AuraCloud Enterprise Governance</p>
+            <p className="text-xs text-zinc-400">Team members provisioned with persistent access in {currentWorkspace.name}</p>
           </div>
           <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-[#060B08] border border-emerald-950 text-emerald-400">
-            {members.length} Members
+            {teamMembers.length} Members
           </span>
         </div>
 
@@ -390,52 +380,67 @@ export default function TeamPage() {
               <tr>
                 <th className="py-3.5 px-4">Member Name</th>
                 <th className="py-3.5 px-4">Work Email</th>
-                <th className="py-3.5 px-4">Title / Department</th>
                 <th className="py-3.5 px-4">Assigned Role</th>
-                <th className="py-3.5 px-4 text-right">Interactive Persona Switch</th>
+                <th className="py-3.5 px-4 text-right">Switch Active Session</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-emerald-950/60">
-              {members.map(m => (
-                <tr key={m.id} className="hover:bg-[#060B08]/80 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-zinc-100 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-emerald-950 border border-emerald-800 text-[10px] font-black text-[#00FF87] flex items-center justify-center">
-                      {m.name.charAt(0)}
-                    </span>
-                    <span>{m.name}</span>
-                  </td>
-                  <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">{m.email}</td>
-                  <td className="py-3.5 px-4 text-zinc-400">{m.title}</td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border ${
-                        m.role === 'admin'
-                          ? 'bg-emerald-950 text-[#00FF87] border-emerald-600'
-                          : m.role === 'reviewer'
-                          ? 'bg-cyan-950 text-cyan-300 border-cyan-800'
-                          : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                      }`}
-                    >
-                      {m.role}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => {
-                        setCurrentRole(m.role);
-                        showToast(`Switched active persona to ${m.name} (${m.role})`, 'info');
-                      }}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                        currentRole === m.role
-                          ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                          : 'bg-[#060B08] hover:bg-emerald-950/50 hover:text-emerald-400 text-zinc-300 border-emerald-900/60'
-                      }`}
-                    >
-                      {currentRole === m.role ? '✓ Active Persona' : 'Simulate As →'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {teamMembers.map(m => {
+                const isActive = currentUser.id === m.id || currentUser.email.toLowerCase() === m.email.toLowerCase();
+                return (
+                  <tr key={m.id} className="hover:bg-[#060B08]/80 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-zinc-100 flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-full bg-emerald-950 border border-emerald-800 text-[11px] font-black text-[#00FF87] flex items-center justify-center">
+                        {(m.full_name || m.name || 'U').charAt(0).toUpperCase()}
+                      </span>
+                      <div>
+                        <div>{m.full_name || m.name}</div>
+                        {isActive && (
+                          <span className="text-[10px] text-[#00FF87] font-semibold">Active Session</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">{m.email}</td>
+                    <td className="py-3.5 px-4">
+                      {currentRole === 'admin' ? (
+                        <select
+                          value={m.role}
+                          onChange={e => updateMemberRole(m.id, e.target.value as UserRole)}
+                          className="bg-[#060B08] border border-emerald-900/60 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="reviewer">Reviewer</option>
+                          <option value="creator">Creator</option>
+                        </select>
+                      ) : (
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border ${
+                            m.role === 'admin'
+                              ? 'bg-emerald-950 text-[#00FF87] border-emerald-600'
+                              : m.role === 'reviewer'
+                              ? 'bg-cyan-950 text-cyan-300 border-cyan-800'
+                              : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                          }`}
+                        >
+                          {m.role}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => switchAccount(m.id)}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                            : 'bg-[#060B08] hover:bg-emerald-950/50 hover:text-emerald-400 text-zinc-300 border-emerald-900/60'
+                        }`}
+                      >
+                        {isActive ? '✓ Active Persona' : 'Switch Persona →'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

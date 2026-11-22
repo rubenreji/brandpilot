@@ -8,7 +8,7 @@ from app.models.schemas import (
     ContentRevision, Notification, AuditLogEntry
 )
 from app.seed.demo_data import (
-    get_demo_organization, get_demo_users, get_demo_guidelines,
+    get_demo_organization, get_all_demo_organizations, get_demo_users, get_demo_guidelines,
     get_demo_facts, get_demo_terminology, get_demo_tone, get_demo_assets,
     get_demo_submissions, get_demo_findings, DEMO_ORG_ID
 )
@@ -38,9 +38,15 @@ class InMemoryDatabase:
         self.seed_demo_data()
 
     def seed_demo_data(self):
-        # 1. Org & Users
+        # 1. Org & Users (12 Commercial Enterprise Brand Bases)
+        for o in get_all_demo_organizations():
+            self.organizations[o.id] = o
+            self.facts[o.id] = []
+            self.terminology[o.id] = []
+            self.brand_assets[o.id] = []
+            self.guideline_chunks[o.id] = []
+
         org = get_demo_organization()
-        self.organizations[org.id] = org
         for u in get_demo_users():
             self.users[u.id] = u
 

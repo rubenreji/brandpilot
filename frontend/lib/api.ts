@@ -13,11 +13,30 @@ import {
   Notification
 } from './types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalhost && process.env.NEXT_PUBLIC_API_URL?.includes('localhost')) {
+      return '';
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || '';
+}
+
+function resolveUrl(endpoint: string): string {
+  const base = getApiBase();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (!base) {
+    return cleanEndpoint.startsWith('/api') ? cleanEndpoint : `/api${cleanEndpoint}`;
+  }
+  const cleanBase = base.replace(/\/$/, '');
+  const pathPart = cleanEndpoint.startsWith('/api') ? cleanEndpoint.slice(4) : cleanEndpoint;
+  return `${cleanBase}${pathPart}`;
+}
 
 async function safeFetch<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
   try {
-    const url = API_BASE ? `${API_BASE}${endpoint}` : `/api${endpoint.startsWith('/api') ? endpoint.slice(4) : endpoint}`;
+    const url = resolveUrl(endpoint);
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -170,7 +189,147 @@ export const BrandPilotAPI = {
 
   async inspectVisual(formData: FormData) {
     try {
-      const res = await fetch(`${API_BASE}/visual/inspect`, {
+      const url = resolveUrl('/visual/inspect');
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async autoExtractBrandGuidelines(payload: {
+    guideline_text?: string;
+    source_title?: string;
+    org_id?: string;
+  }) {
+    return safeFetch<any>('/knowledge/auto-extract', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async dispatchPublishing(payload: {
+    submission_id: string;
+    platform: string;
+    clearance_stamp?: string;
+    destination_channel?: string;
+  }) {
+    return safeFetch<any>('/publishing/dispatch', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async inSituLint(payload: {
+    text: string;
+    context?: string;
+    colors?: string[];
+    org_id?: string;
+  }) {
+    return safeFetch<any>('/insitu/lint', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async auditMultimodalSpeech(payload: {
+    title: string;
+    transcript: string;
+    speaker_role?: string;
+    media_type?: string;
+    jurisdiction?: string;
+    org_id?: string;
+  }) {
+    return safeFetch<any>('/multimodal/audit-speech', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async dispatchSlackAlert(payload: {
+    submission_id: string;
+    channel?: string;
+    severity_level?: string;
+    alert_type?: string;
+  }) {
+    return safeFetch<any>('/webhooks/slack-alert', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getPublicVerification(submissionId: string) {
+    return safeFetch<any>(`/verify/${submissionId}`);
+  },
+
+  async scanCompetitorVulnerabilities(payload: {
+    competitor_name: string;
+    copy_text: string;
+    campaign_type?: string;
+    target_jurisdiction?: string;
+    org_id?: string;
+  }) {
+    return safeFetch<any>('/intelligence/competitor-scan', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getEnterpriseStatus() {
+    return safeFetch<any>('/system/enterprise-status');
+  },
+
+  async testWebhookPing(payload: {
+    target_url: string;
+    event_type?: string;
+    secret_key?: string;
+  }) {
+    return safeFetch<any>('/developer/webhooks/test-ping', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async listApiKeys() {
+    return safeFetch<any>('/developer/api-keys');
+  },
+
+  async generateApiKey(payload: {
+    key_name: string;
+    scopes?: string[];
+    expires_in_days?: number;
+  }) {
+    return safeFetch<any>('/developer/api-keys/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getSubscriptionUsage() {
+    return safeFetch<any>('/billing/subscription-usage');
+  },
+
+  // --- ADVANCED VISUAL COMPLIANCE & DESIGN INSPECTION ---
+  async getVisualPresets() {
+    return safeFetch<any>('/visual/presets');
+  },
+
+  async inspectVisualPreset(presetId: string, orgId?: string) {
+    return safeFetch<any>('/visual/presets/inspect', {
+      method: 'POST',
+      body: JSON.stringify({ preset_id: presetId, org_id: orgId || 'org-auracloud-001' })
+    });
+  },
+
+  async inspectVisualGraphic(formData: FormData, orgId?: string) {
+    try {
+      const targetOrg = orgId || 'org-auracloud-001';
+      const url = resolveUrl(`/visual/inspect?org_id=${targetOrg}`);
+      const res = await fetch(url, {
         method: 'POST',
         body: formData
       });
@@ -181,3 +340,4 @@ export const BrandPilotAPI = {
     }
   }
 };
+

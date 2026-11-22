@@ -25,7 +25,9 @@ import {
   Menu,
   X,
   Check,
-  RotateCcw
+  RotateCcw,
+  Layers,
+  Mic
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -44,12 +46,17 @@ export function AppShell({ children }: AppShellProps) {
     switchAccount,
     submissions,
     logoutUser,
-    resetAllTrackers
+    resetAllTrackers,
+    allBrandBases,
+    switchWorkspace,
+    dbSyncStatus,
+    isSupabaseActive
   } = useBrandPilot();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
 
   // Account-specific notifications strictly scoped to active user
   const userNotifications = notifications.filter(n => n.user_id === currentUser.id);
@@ -80,6 +87,8 @@ export function AppShell({ children }: AppShellProps) {
     { label: 'Revisions & History', href: '/app/history', icon: History },
     { label: 'Governance Analytics', href: '/app/analytics', icon: BarChart3 },
     { label: 'Visual Identity', href: '/app/visual', icon: Palette },
+    { label: 'In-Situ Studio (Figma/Web)', href: '/app/insitu', icon: Layers, badge: 'New' },
+    { label: 'Multimodal Audio/Video', href: '/app/multimodal', icon: Mic, badge: 'New' },
     { label: 'Team & Roles', href: '/app/team', icon: Users },
     { label: 'Settings', href: '/app/settings', icon: Settings }
   ];
@@ -100,6 +109,10 @@ export function AppShell({ children }: AppShellProps) {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 hidden sm:flex">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00FF87] animate-pulse"></span>
+            <span className="font-semibold">Supabase DB: Persistent ({dbSyncStatus.toUpperCase()})</span>
+          </div>
           <span className="text-amber-400 font-medium hidden md:inline">
             Strict Policy: AI cannot independently publish content
           </span>
@@ -138,13 +151,57 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </Link>
 
-          {/* Workspace Pill */}
-          <div className="hidden md:flex items-center gap-2 pl-4 border-l border-emerald-950 ml-2">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#0F1712] border border-emerald-900/50 text-xs font-medium text-emerald-200">
+          {/* Interactive Brand Base Workspace Switcher */}
+          <div className="relative hidden md:block pl-4 border-l border-emerald-950 ml-2">
+            <button
+              type="button"
+              onClick={() => setWorkspaceMenuOpen(!workspaceMenuOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0F1712] hover:bg-emerald-950/60 border border-emerald-900/50 hover:border-emerald-500/50 text-xs font-medium text-emerald-200 transition-all cursor-pointer"
+            >
               <Building2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{currentWorkspace.name}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00FF87] shadow-[0_0_6px_#00FF87]"></span>
-            </div>
+              <span className="font-bold text-white max-w-[130px] truncate">{currentWorkspace.name}</span>
+              <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-emerald-950 text-[#00FF87] border border-emerald-800">
+                12 Bases
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+            </button>
+
+            {workspaceMenuOpen && (
+              <div className="absolute left-4 mt-2 w-80 rounded-2xl bg-[#0A120E] border border-emerald-800 shadow-2xl z-50 p-2 space-y-1 max-h-96 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-2 border-b border-emerald-950 flex items-center justify-between text-xs">
+                  <span className="font-bold uppercase tracking-wider text-emerald-400 text-[10px]">
+                    Switch Brand Base
+                  </span>
+                  <span className="text-zinc-500 text-[10px] font-mono">12 Pre-Seeded Brands</span>
+                </div>
+                {allBrandBases.map(b => (
+                  <button
+                    key={b.workspace.id}
+                    type="button"
+                    onClick={() => {
+                      switchWorkspace(b.workspace.id);
+                      setWorkspaceMenuOpen(false);
+                    }}
+                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer text-xs ${
+                      currentWorkspace.id === b.workspace.id
+                        ? 'bg-emerald-950/80 border border-emerald-500/50 text-white'
+                        : 'hover:bg-[#060B08] text-zinc-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">{b.icon}</span>
+                      <div>
+                        <div className="font-bold text-white text-xs">{b.workspace.name}</div>
+                        <div className="text-[10px] text-zinc-400">{b.badge}</div>
+                      </div>
+                    </div>
+                    {currentWorkspace.id === b.workspace.id && (
+                      <Check className="w-4 h-4 text-[#00FF87] shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

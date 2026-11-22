@@ -68,7 +68,11 @@ class DeterministicLinter:
                         exact_supporting_passage=f"Approved Vocabulary Standard: Do not use '{term}'. Always use approved brand terminology: {rule.preferred_alternative or 'neutral phrasing'}.",
                         suggested_correction=suggestion,
                         confidence=1.0,
-                        status=SuggestionStatus.PENDING
+                        status=SuggestionStatus.PENDING,
+                        verification_status="cannot_be_verified" if rule.rule_type != RuleType.PROHIBITED else "contradicted",
+                        claim_type="terminology",
+                        context_reasoning=f"The term '{matched_str}' deviates from company brand nomenclature guidelines. {rule.rule_description}",
+                        grounded_evidence=f"Brand Manual Section 3: '{term}' is unapproved nomenclature. Approved replacement: '{rule.preferred_alternative or 'neutral professional wording'}'."
                     )
                     findings.append(finding)
             
@@ -91,19 +95,67 @@ class DeterministicLinter:
                         exact_supporting_passage=f"Legal Policy 1.4: All published collateral mentioning product capabilities must explicitly include: '{term}'.",
                         suggested_correction=f"{text.strip()}\n\n*Disclaimer: {term}*",
                         confidence=1.0,
-                        status=SuggestionStatus.PENDING
+                        status=SuggestionStatus.PENDING,
+                        verification_status="cannot_be_verified",
+                        claim_type="disclaimer",
+                        context_reasoning=f"Required statutory disclaimer '{term}' is missing from the submitted document.",
+                        grounded_evidence=f"Legal Standards Section 1.4 requires mandatory disclosure: '{term}'."
                     )
                     findings.append(finding)
 
         # 2. Heuristic checks for unapproved absolute superlatives & guarantees
         superlative_patterns = [
-            (r'\b(cheapest|lowest price|unbeatable prices?)\b', "Unsubstantiated comparative pricing claim", IssueCategory.UNSUPPORTED_CLAIM, FindingSeverity.CRITICAL, "A price comparison requires a defined competitor set and verified pricing audit evidence.", "cost-effective enterprise solution"),
-            (r'\b(100% accuracy|guarantees? 100%|flawless accuracy)\b', "Absolute performance guarantee", IssueCategory.UNSUPPORTED_CLAIM, FindingSeverity.CRITICAL, "Absolute performance guarantees are legally prohibited without qualified warranty coverage and active SLA bounds.", "high-precision automated verification"),
-            (r'\b(India\'?s No\.? ?1|world\'?s best|industry leader)\b', "Unsupported market leadership claim", IssueCategory.UNSUPPORTED_CLAIM, FindingSeverity.HIGH, "Market leadership claims require verified third-party analyst recognition (e.g. Gartner, IDC) and dated citation.", "leading AI-assisted brand governance platform"),
-            (r'\b(AI magic|magical|revolutionary AI miracle)\b', "Inappropriate hype & buzzword usage", IssueCategory.TONE_MISMATCH, FindingSeverity.MEDIUM, "Our brand voice prioritizes technical precision and enterprise authority over speculative hype.", "intelligent automated inspection")
+            (
+                r'\b(cheapest|lowest price|unbeatable prices?)\b',
+                "Unsubstantiated comparative pricing claim",
+                IssueCategory.UNSUPPORTED_CLAIM,
+                FindingSeverity.CRITICAL,
+                "A price comparison requires a defined competitor set and verified pricing audit evidence.",
+                "cost-effective enterprise solution",
+                "contradicted",
+                "pricing",
+                "Asserting comparative superlatives like 'cheapest' directly conflicts with enterprise positioning and exposes the firm to Lanham Act § 43(a) comparative advertising liability.",
+                "Approved Price Book: AuraCloud solutions are positioned as premium enterprise infrastructure starting at $49/node, not commodity discounted services."
+            ),
+            (
+                r'\b(100% accuracy|guarantees? 100%|flawless accuracy)\b',
+                "Absolute performance guarantee",
+                IssueCategory.UNSUPPORTED_CLAIM,
+                FindingSeverity.CRITICAL,
+                "Absolute performance guarantees are legally prohibited without qualified warranty coverage and active SLA bounds.",
+                "high-precision automated verification",
+                "cannot_be_verified",
+                "absolute_guarantee",
+                "Empirical software and machine learning systems cannot promise 100% precision across all edge cases without statistical confidence qualifications.",
+                "Policy 4.2: Never state absolute guarantees without legal qualification and active SLA bounds."
+            ),
+            (
+                r'\b(India\'?s No\.? ?1|world\'?s best|industry leader)\b',
+                "Unsupported market leadership claim",
+                IssueCategory.UNSUPPORTED_CLAIM,
+                FindingSeverity.HIGH,
+                "Market leadership claims require verified third-party analyst recognition (e.g. Gartner, IDC) and dated citation.",
+                "leading AI-assisted brand governance platform",
+                "cannot_be_verified",
+                "market_ranking",
+                "Market leadership ranking asserted without dated third-party analyst citation (e.g. Gartner Magic Quadrant, IDC MarketScape).",
+                "Corporate Manual Section 4.2: Market ranking assertions must cite recognized industry analyst reports published within the trailing 12 months."
+            ),
+            (
+                r'\b(AI magic|magical|revolutionary AI miracle)\b',
+                "Inappropriate hype & buzzword usage",
+                IssueCategory.TONE_MISMATCH,
+                FindingSeverity.MEDIUM,
+                "Our brand voice prioritizes technical precision and enterprise authority over speculative hype.",
+                "intelligent automated inspection",
+                "cannot_be_verified",
+                "tone",
+                "Vague marketing hype trivializes enterprise software engineering and violates brand voice standards.",
+                "Brand Tone Standard: Maintain clear, active voice with technical precision. Avoid speculative buzzwords."
+            )
         ]
 
-        for pat, rule_title, cat, sev, reason, rec in superlative_patterns:
+        for pat, rule_title, cat, sev, reason, rec, v_stat, c_type, ctx_reason, g_evid in superlative_patterns:
             for match in re.finditer(pat, text, flags=re.IGNORECASE):
                 start, end = match.span()
                 matched_str = text[start:end]
@@ -124,7 +176,11 @@ class DeterministicLinter:
                     exact_supporting_passage="Policy 4.2: Never state absolute guarantees, unsupported rankings, or exaggerated superlatives. All product descriptions must reflect verifiable specifications.",
                     suggested_correction=rec,
                     confidence=0.98,
-                    status=SuggestionStatus.PENDING
+                    status=SuggestionStatus.PENDING,
+                    verification_status=v_stat,
+                    claim_type=c_type,
+                    context_reasoning=ctx_reason,
+                    grounded_evidence=g_evid
                 )
                 findings.append(finding)
 

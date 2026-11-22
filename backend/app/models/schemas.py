@@ -59,6 +59,11 @@ class SuggestionStatus(str, Enum):
     REJECTED = "rejected"
     EDITED = "edited"
 
+class VerificationStatus(str, Enum):
+    SUPPORTED = "supported"
+    CONTRADICTED = "contradicted"
+    CANNOT_BE_VERIFIED = "cannot_be_verified"
+
 # --- SCHEMAS ---
 
 # Organization & User
@@ -217,6 +222,28 @@ class ComplianceFinding(BaseModel):
     confidence: float = 0.95
     status: SuggestionStatus = SuggestionStatus.PENDING
     user_comment: Optional[str] = None
+    verification_status: Optional[str] = "contradicted"  # "supported", "contradicted", "cannot_be_verified"
+    claim_type: Optional[str] = "factual"  # "factual", "terminology", "superlative", "tone", "regulatory"
+    context_reasoning: Optional[str] = None
+    grounded_evidence: Optional[str] = None
+
+class VerifiedClaim(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    claim_text: str
+    status: str = "supported"  # "supported", "contradicted", "cannot_be_verified"
+    confidence: float = 0.95
+    explanation: str
+    relevant_source: Optional[str] = None
+    exact_passage: Optional[str] = None
+    suggested_correction: Optional[str] = None
+
+class ClaimVerificationSummary(BaseModel):
+    total_claims_analyzed: int = 0
+    supported_count: int = 0
+    contradicted_count: int = 0
+    unverified_count: int = 0
+    integrity_score: float = 100.0
+    claims: List[VerifiedClaim] = []
 
 class ContentSubmission(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -238,6 +265,7 @@ class ContentSubmission(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     findings_count: int = 0
     critical_count: int = 0
+    claim_verification_summary: Optional[ClaimVerificationSummary] = None
 
 class ContentSubmissionCreate(BaseModel):
     title: str
@@ -300,3 +328,172 @@ class AuditLogEntry(BaseModel):
     entity_id: str
     details: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+# --- ADVANCED ROUND 3 SCHEMAS: INGESTION, PUBLISHING & IN-SITU ---
+
+class AutoExtractRequest(BaseModel):
+    guideline_text: Optional[str] = None
+    source_title: Optional[str] = "AuraCloud Enterprise Brand & Governance Manual v3.0"
+    org_id: Optional[str] = "org-auracloud-001"
+
+class PublishingDispatchRequest(BaseModel):
+    submission_id: str
+    platform: str = "Webflow CMS"  # Webflow CMS, WordPress Production, Ghost Blog, HubSpot Campaigns, Notion
+    clearance_stamp: Optional[str] = None
+    destination_channel: Optional[str] = "Production Public Cloud"
+    target_slug: Optional[str] = None
+
+class InSituLintRequest(BaseModel):
+    text: str
+    context: Optional[str] = "social_post"  # social_post, blog_editor, figma_canvas
+    colors: Optional[List[str]] = None
+    org_id: Optional[str] = "org-auracloud-001"
+
+class MultimodalSpeechAuditRequest(BaseModel):
+    title: str = "Keynote Address or Video Ad"
+    transcript: str
+    speaker_role: Optional[str] = "Executive Keynote Speaker"
+    media_type: Optional[str] = "keynote_video"  # keynote_video, podcast_audio, promo_video
+    jurisdiction: Optional[str] = "global"  # global, us_ftc, eu_ai_act, uk_asa
+    org_id: Optional[str] = "org-auracloud-001"
+
+class SlackAlertDispatchRequest(BaseModel):
+    submission_id: str
+    channel: Optional[str] = "#brand-governance-alerts"
+    severity_level: Optional[str] = "critical"
+    alert_type: Optional[str] = "regulatory_violation"
+
+# --- EXECUTIVE & INTELLIGENCE EXTENSIONS ---
+
+class CompetitorScanRequest(BaseModel):
+    competitor_name: str = "Rival Cloud Platform"
+    copy_text: str
+    campaign_type: Optional[str] = "press_release"
+    target_jurisdiction: Optional[str] = "us_ftc"  # us_ftc, global, eu_ai_act, uk_asa
+    org_id: Optional[str] = "org-auracloud-001"
+
+class PublicVerificationResponse(BaseModel):
+    is_verified: bool
+    status: str
+    submission_id: str
+    title: str
+    content_text: str
+    compliance_score: int
+    reviewer_name: str
+    reviewer_role: str
+    approval_timestamp: str
+    cryptographic_stamp: str
+    sha256_document_digest: str
+    active_guideline_version: str
+    tamper_proof_seal: str
+    organization_name: str
+
+# --- COMMERCIAL ENTERPRISE DEPLOYMENT & DEVELOPER SCHEMAS ---
+
+class WebhookTestPingRequest(BaseModel):
+    target_url: str = "https://hooks.auracloud.io/brandpilot/events"
+    event_type: str = "audit.flagged"
+    secret_key: Optional[str] = "whsec_live_9b42e718c30f4a9b"
+
+class ApiKeyGenerateRequest(BaseModel):
+    key_name: str = "Production CI/CD Automation"
+    scopes: List[str] = Field(default_factory=lambda: ["audit:read", "audit:write", "insitu:lint"])
+    expires_in_days: int = 365
+
+# --- ADVANCED VISUAL COMPLIANCE & DESIGN INSPECTION SCHEMAS ---
+
+class VisualBoundingBox(BaseModel):
+    x: int
+    y: int
+    width: int
+    height: int
+    x_pct: float
+    y_pct: float
+    w_pct: float
+    h_pct: float
+
+class VisualFindingCategory(str, Enum):
+    COLOR_DIVERGENCE = "color_divergence"
+    LOGO_DISTORTION = "logo_distortion"
+    LOGO_CLEARANCE = "logo_clearance"
+    EMBEDDED_TEXT_VIOLATION = "embedded_text_violation"
+    CONTRAST_ACCESSIBILITY = "contrast_accessibility"
+
+class VisualFinding(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    category: str
+    severity: str  # critical, high, medium, low
+    title: str
+    description: str
+    detected_value: Optional[str] = None
+    recommended_value: Optional[str] = None
+    bounding_box: Optional[VisualBoundingBox] = None
+    wcag_level: Optional[str] = None
+    remediation_action: Optional[str] = None
+
+class ColorClusterInfo(BaseModel):
+    hex: str
+    percentage: float
+    is_compliant: bool
+    nearest_token: Optional[str] = None
+    distance: Optional[float] = None
+    role: Optional[str] = None
+    bounding_box: Optional[VisualBoundingBox] = None
+
+class LogoInspectionDetails(BaseModel):
+    detected: bool = True
+    confidence: float = 0.98
+    aspect_ratio: float = 1.0
+    expected_aspect_ratio: float = 1.0
+    aspect_distortion_pct: float = 0.0
+    is_distorted: bool = False
+    clear_space_passed: bool = True
+    clear_space_margin_ratio: float = 0.65
+    required_margin_ratio: float = 0.50
+    bounding_box: Optional[VisualBoundingBox] = None
+    exclusion_zone_box: Optional[VisualBoundingBox] = None
+
+class ContrastCheckZone(BaseModel):
+    zone_name: str
+    foreground_hex: str
+    background_hex: str
+    contrast_ratio: float
+    wcag_aa_pass: bool
+    wcag_aaa_pass: bool
+    is_large_text: bool = False
+    bounding_box: Optional[VisualBoundingBox] = None
+
+class OCRTextFinding(BaseModel):
+    extracted_text: str
+    line_number: int = 1
+    bounding_box: Optional[VisualBoundingBox] = None
+    violations_count: int = 0
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
+
+class VisualInspectionScoreBreakdown(BaseModel):
+    color_palette_score: int
+    logo_integrity_score: int
+    embedded_copy_score: int
+    wcag_contrast_score: int
+    composite_score: int
+    compliance_grade: str
+
+class VisualInspectionReport(BaseModel):
+    status: str
+    asset_dimensions: str
+    image_preview_url: Optional[str] = None
+    score: VisualInspectionScoreBreakdown
+    findings: List[VisualFinding]
+    dominant_colors: List[ColorClusterInfo]
+    logo_inspection: LogoInspectionDetails
+    wcag_contrast_checks: List[ContrastCheckZone]
+    ocr_extracted_copy: List[OCRTextFinding]
+    limitations_note: str
+
+class VisualInspectPresetRequest(BaseModel):
+    preset_id: str
+    org_id: Optional[str] = "org-auracloud-001"
+
+
+
+
