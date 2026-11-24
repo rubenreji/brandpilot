@@ -925,6 +925,142 @@ export async function POST(
     });
   }
 
+  // 14. Real-Time Sentinel Live Web Crawler
+  if (pathStr === 'sentinel/crawl') {
+    const targetUrl = body.url || 'https://auracloud.io';
+    let fetchedText = '';
+    let pageTitle = targetUrl;
+    let isExternalFetch = false;
+
+    if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(targetUrl, {
+          signal: controller.signal,
+          headers: { 'User-Agent': 'BrandPilot-Sentinel-Crawler/2.0 (+https://auracloud.io/bot)' }
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const html = await res.text();
+          isExternalFetch = true;
+          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+          if (titleMatch) pageTitle = titleMatch[1].trim();
+          fetchedText = html
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .slice(0, 5000);
+        }
+      } catch {}
+    }
+
+    if (!fetchedText) {
+      if (targetUrl.includes('pricing')) {
+        fetchedText = 'AuraCloud pricing: Guaranteed 100% uptime with our proprietary AI magic and cheapest cloud pricing in India.';
+      } else if (targetUrl.includes('blog')) {
+        fetchedText = 'AuraCloud is recognized across the industry as India\'s No. 1 multi-cloud solution with unhackable security.';
+      } else {
+        fetchedText = 'AuraCloud provides enterprise infrastructure governance with verified 99.95% monthly uptime SLAs.';
+      }
+    }
+
+    const crawlIssues: any[] = [];
+    if (/100%\s+uptime/i.test(fetchedText)) {
+      crawlIssues.push({
+        id: `drift-${Date.now()}-1`,
+        target_id: body.targetId || 'target-1',
+        url: targetUrl,
+        dom_selector: 'p.sla-claim',
+        flagged_text: 'Guaranteed 100% uptime',
+        category: 'unsupported_claim',
+        severity: 'critical',
+        explanation: 'Contradicts verified 99.95% SLA policy. Triggers FTC substantiation penalty risk.',
+        suggested_fix: '99.95% monthly uptime SLA',
+        detected_at: 'Just now',
+        status: 'active'
+      });
+    }
+    if (/cheapest/i.test(fetchedText)) {
+      crawlIssues.push({
+        id: `drift-${Date.now()}-2`,
+        target_id: body.targetId || 'target-1',
+        url: targetUrl,
+        dom_selector: 'span.pricing-superlative',
+        flagged_text: 'cheapest cloud pricing',
+        category: 'unsupported_claim',
+        severity: 'high',
+        explanation: 'Unsubstantiated comparative pricing superlative.',
+        suggested_fix: 'cost-effective enterprise solution',
+        detected_at: 'Just now',
+        status: 'active'
+      });
+    }
+    if (/AI\s*magic/i.test(fetchedText)) {
+      crawlIssues.push({
+        id: `drift-${Date.now()}-3`,
+        target_id: body.targetId || 'target-1',
+        url: targetUrl,
+        dom_selector: 'h2.feature-headline',
+        flagged_text: 'proprietary AI magic',
+        category: 'terminology',
+        severity: 'high',
+        explanation: 'Colloquial terminology prohibited under corporate Nomenclature Policy 3.4.',
+        suggested_fix: 'intelligent automated orchestration',
+        detected_at: 'Just now',
+        status: 'active'
+      });
+    }
+
+    const calculatedScore = Math.max(45, 100 - (crawlIssues.length * 20));
+
+    return NextResponse.json({
+      status: 'success',
+      target_url: targetUrl,
+      page_title: pageTitle,
+      live_fetch: isExternalFetch,
+      compliance_score: calculatedScore,
+      drift_count: crawlIssues.length,
+      extracted_sample_text: fetchedText.slice(0, 200),
+      new_issues: crawlIssues
+    });
+  }
+
+  // 15. Real-Time Competitor Claim Counter-Strike Analysis
+  if (pathStr === 'counterstrike/analyze') {
+    const compName = body.competitor_name || 'Rival Cloud';
+    const compClaim = body.claim || '';
+    
+    let vulnerabilityScore = 75;
+    let exposureExplanation = 'FTC Act Section 5 Violation: Subjective performance superlative without certified third-party testing.';
+    let angle = 'Verified Transparency vs. Exaggerated Hype';
+    let counterCopy = `Looking for real enterprise reliability instead of empty promises?\n\nWhile ${compName} claims "${compClaim.slice(0, 40)}...", AuraCloud delivers contractually enforceable SLAs with verified third-party audit reports.`;
+
+    if (/100%|unbreakable|zero.*down/i.test(compClaim)) {
+      vulnerabilityScore = 94;
+      exposureExplanation = 'FTC Deception Standard: Absolute zero-downtime claims are legally indefensible under FTC 15 U.S.C. § 45.';
+      angle = 'Contractual SLAs vs. Impossible Guarantees';
+      counterCopy = `Don't fall for ${compName}'s "unbreakable" claims.\n\nAuraCloud guarantees real-world 99.99% high-availability multi-region redundancy backed by automated failover.`;
+    } else if (/cheapest|75%|50%|discount/i.test(compClaim)) {
+      vulnerabilityScore = 88;
+      exposureExplanation = 'FTC Deceptive Pricing Guide: Claims of extreme price discounts without disclosing mandatory multi-year reserved commitments.';
+      angle = 'No-Lock-In Pricing vs. Hidden Multi-Year Traps';
+      counterCopy = `Read the fine print before signing with ${compName}.\n\nAuraCloud provides transparent, honest pay-per-compute pricing with zero contractual lock-in.`;
+    }
+
+    return NextResponse.json({
+      status: 'analyzed',
+      competitor: compName,
+      claim: compClaim,
+      vulnerability_score: vulnerabilityScore,
+      legal_exposure: exposureExplanation,
+      counter_angle: angle,
+      counter_ad_copy: counterCopy,
+      mandatory_disclaimer: '*Comparisons based on publicly available service terms and pricing schedules as of Q4 2026.'
+    });
+  }
+
   // Default POST response
   return NextResponse.json({ status: 'success', path: pathStr, body });
 }

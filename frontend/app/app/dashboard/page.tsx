@@ -109,7 +109,7 @@ export default function DashboardPage() {
             <span>Enterprise SaaS Governance</span>
             <span>•</span>
             <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950 text-[#00FF87] border border-emerald-800">
-              Live Active Persona: {currentRole}
+              Active Role: {currentRole.toUpperCase()}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
@@ -125,10 +125,10 @@ export default function DashboardPage() {
             type="button"
             onClick={resetAllTrackers}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0A120E] border border-emerald-900/60 hover:border-emerald-500 rounded-lg text-xs font-bold text-zinc-300 hover:text-emerald-400 transition-colors shadow-xs cursor-pointer"
-            title="Reset all trackers and start from zero"
+            title="Reset local metrics and telemetry counters"
           >
             <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Reset Trackers</span>
+            <span>Reset Metrics</span>
           </button>
 
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0A120E] border border-emerald-900/60 rounded-lg text-xs font-medium text-zinc-300 shadow-xs">

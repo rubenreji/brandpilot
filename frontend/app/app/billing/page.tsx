@@ -27,7 +27,10 @@ export default function BillingPage() {
     billingPlan,
     updateBillingPlan,
     downloadInvoicePdf,
-    showToast
+    showToast,
+    submissions,
+    sentinelTargets,
+    teamMembers
   } = useBrandPilot();
 
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
@@ -291,48 +294,54 @@ export default function BillingPage() {
           <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-white">Monthly Audits</span>
-              <span className="font-mono text-zinc-400">342 / 1,000</span>
+              <span className="font-mono text-zinc-400">{Math.max(submissions.length, 1)} / 1,000</span>
             </div>
             <div className="h-2 bg-[#0A120E] rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-400 rounded-full" style={{ width: '34.2%' }} />
+              <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${Math.min(100, Math.max(submissions.length, 1) / 10)}%` }} />
             </div>
-            <div className="text-[10px] text-zinc-400 font-mono">34.2% consumed • 658 remaining</div>
+            <div className="text-[10px] text-zinc-400 font-mono">
+              {((Math.max(submissions.length, 1) / 1000) * 100).toFixed(1)}% consumed • {1000 - Math.max(submissions.length, 1)} remaining
+            </div>
           </div>
 
           {/* Meter 2: Visual Inspections */}
           <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-white">Visual Design Scans</span>
-              <span className="font-mono text-zinc-400">89 / 250</span>
+              <span className="font-mono text-zinc-400">14 / 250</span>
             </div>
             <div className="h-2 bg-[#0A120E] rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-400 rounded-full" style={{ width: '35.6%' }} />
+              <div className="h-full bg-emerald-400 rounded-full" style={{ width: '5.6%' }} />
             </div>
-            <div className="text-[10px] text-zinc-400 font-mono">35.6% consumed • 161 remaining</div>
+            <div className="text-[10px] text-zinc-400 font-mono">5.6% consumed • 236 remaining</div>
           </div>
 
           {/* Meter 3: Team Seats */}
           <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-white">Active Team Seats</span>
-              <span className="font-mono text-zinc-400">3 / 10</span>
+              <span className="font-mono text-zinc-400">{Math.max(teamMembers.length, 3)} / 10</span>
             </div>
             <div className="h-2 bg-[#0A120E] rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-400 rounded-full" style={{ width: '30%' }} />
+              <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${(Math.max(teamMembers.length, 3) / 10) * 100}%` }} />
             </div>
-            <div className="text-[10px] text-zinc-400 font-mono">3 assigned • 7 available seats</div>
+            <div className="text-[10px] text-zinc-400 font-mono">
+              {Math.max(teamMembers.length, 3)} assigned • {10 - Math.max(teamMembers.length, 3)} available seats
+            </div>
           </div>
 
           {/* Meter 4: Sentinel Targets */}
           <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-white">Brand Sentinel URLs</span>
-              <span className="font-mono text-zinc-400">4 / 10</span>
+              <span className="font-mono text-zinc-400">{Math.max(sentinelTargets.length, 3)} / 10</span>
             </div>
             <div className="h-2 bg-[#0A120E] rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-400 rounded-full" style={{ width: '40%' }} />
+              <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${(Math.max(sentinelTargets.length, 3) / 10) * 100}%` }} />
             </div>
-            <div className="text-[10px] text-zinc-400 font-mono">4 monitored • 6 slots left</div>
+            <div className="text-[10px] text-zinc-400 font-mono">
+              {Math.max(sentinelTargets.length, 3)} monitored • {10 - Math.max(sentinelTargets.length, 3)} slots left
+            </div>
           </div>
         </div>
       </div>

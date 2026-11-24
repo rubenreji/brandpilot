@@ -38,11 +38,11 @@ export default function CorrectionsIndexPage() {
     );
   };
 
-  const handleLoadDemoDraft = () => {
-    const demoTitle = "Q4 Enterprise Cloud Infrastructure Announcement";
-    const demoText = "We are thrilled to announce that AuraCloud is India's No. 1 AI cloud company. Our revolutionary AI magic guarantees 100% accuracy and is the cheapest solution available on the market today. Join thousands of developers who trust auracloud without hesitation.";
-    const id = createLiveSubmission(demoTitle, demoText);
-    showToast('Loaded demo audited document into studio!', 'success');
+  const handleLoadBenchmarkDraft = () => {
+    const draftTitle = "Q4 Enterprise Cloud Infrastructure Announcement";
+    const draftText = "We are thrilled to announce that AuraCloud is India's No. 1 AI cloud company. Our revolutionary AI magic guarantees 100% accuracy and is the cheapest solution available on the market today. Join thousands of developers who trust auracloud without hesitation.";
+    const id = createLiveSubmission(draftTitle, draftText);
+    showToast('Loaded benchmark evaluation draft into studio!', 'success');
     router.push(`/app/corrections/${id}`);
   };
 
@@ -80,11 +80,11 @@ export default function CorrectionsIndexPage() {
 
         <button
           type="button"
-          onClick={handleLoadDemoDraft}
+          onClick={handleLoadBenchmarkDraft}
           className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl shadow-[0_0_16px_rgba(16,185,129,0.35)] flex items-center gap-2 cursor-pointer transition-all self-start sm:self-auto shrink-0"
         >
           <Sparkles className="w-4 h-4 text-black" />
-          <span>Load Demo Audited Draft →</span>
+          <span>Load Benchmark Evaluation Draft →</span>
         </button>
       </div>
 

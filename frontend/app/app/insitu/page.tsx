@@ -60,6 +60,31 @@ export default function InSituStudioPage() {
   const [linterLatency, setLinterLatency] = useState<number>(3.2);
   const [lintScore, setLintScore] = useState<number>(45);
 
+  // Live REST API Sandbox State
+  const [apiTestText, setApiTestText] = useState('AuraCloud guarantees 100% uptime with our proprietary AI magic and cheapest pricing.');
+  const [apiTestResult, setApiTestResult] = useState<any>(null);
+  const [apiTestLoading, setApiTestLoading] = useState(false);
+
+  const handleExecuteApiTest = async () => {
+    setApiTestLoading(true);
+    const start = performance.now();
+    try {
+      const res = await fetch('/api/insitu/lint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: apiTestText })
+      });
+      const data = await res.json();
+      const latency = Number((performance.now() - start).toFixed(1));
+      setApiTestResult({ ...data, roundtrip_latency_ms: latency });
+      showToast(`REST API returned ${data.issues?.length || 0} issues in ${latency}ms!`, 'success');
+    } catch {
+      showToast('Error calling REST endpoint', 'error');
+    } finally {
+      setApiTestLoading(false);
+    }
+  };
+
   // Run in-situ lint on typing
   useEffect(() => {
     let isMounted = true;
@@ -99,7 +124,7 @@ export default function InSituStudioPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
             In-Situ Workflow Studio
             <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              Round 3 Live Horizon
+              Enterprise In-Situ Suite
             </span>
           </h1>
           <p className="text-sm text-zinc-400 mt-1">
@@ -436,7 +461,7 @@ export default function InSituStudioPage() {
               <div className="flex items-center justify-between pb-3 border-b border-emerald-950 text-xs">
                 <div className="flex items-center gap-2 font-bold text-white">
                   <Laptop className="w-4 h-4 text-emerald-400" />
-                  <span>Simulated Web Composer (LinkedIn / Webflow / Email)</span>
+                  <span>Live Interactive Web Composer (LinkedIn / Webflow / Email)</span>
                 </div>
                 <span className="text-[10px] font-mono text-zinc-400">Auto-Linting Active</span>
               </div>
@@ -554,6 +579,57 @@ export default function InSituStudioPage() {
                 <div className="text-zinc-300 pl-4">-d '{`{"submission_id": "sub-101", "platform": "Webflow CMS"}`}'</div>
               </div>
             </div>
+          </div>
+
+          {/* Interactive Live API Console */}
+          <div className="p-6 rounded-2xl bg-[#080E0B] border border-emerald-500/40 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-emerald-950">
+              <div className="flex items-center gap-2">
+                <Code2 className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white">Live Endpoint Execution Console</h3>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                Interactive POST /api/insitu/lint
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-300 block">Payload String (`text` parameter)</label>
+              <textarea
+                rows={2}
+                value={apiTestText}
+                onChange={e => setApiTestText(e.target.value)}
+                className="w-full text-xs p-3 bg-[#0A120E] border border-emerald-900/60 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
+                placeholder="Enter any candidate text to lint..."
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-zinc-400">
+                Executes directly against your live Next.js serverless route in real time.
+              </span>
+              <button
+                type="button"
+                onClick={handleExecuteApiTest}
+                disabled={apiTestLoading || !apiTestText.trim()}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-xs font-black rounded-xl shadow-lg flex items-center gap-2 transition-all cursor-pointer shadow-[0_0_12px_rgba(0,255,135,0.3)]"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                {apiTestLoading ? 'Executing Request...' : 'Send Live API Request'}
+              </button>
+            </div>
+
+            {apiTestResult && (
+              <div className="mt-4 p-4 rounded-xl bg-[#050806] border border-emerald-900/80 space-y-2 font-mono text-xs">
+                <div className="flex items-center justify-between text-[11px] text-zinc-400 pb-2 border-b border-emerald-950">
+                  <span className="text-emerald-400 font-bold">● HTTP 200 OK • JSON Response</span>
+                  <span className="text-[#00FF87] font-bold">Latency: {apiTestResult.roundtrip_latency_ms}ms</span>
+                </div>
+                <pre className="text-zinc-300 text-[11px] overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
+                  {JSON.stringify(apiTestResult, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       )}

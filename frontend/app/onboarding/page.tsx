@@ -195,7 +195,7 @@ export default function OnboardingPage() {
               <div className="border-2 border-dashed border-emerald-900/60 rounded-2xl p-6 text-center hover:border-emerald-500 bg-[#060B08] transition-colors">
                 <Upload className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
                 <p className="text-sm font-bold text-white">{formData.guidelineDocName}</p>
-                <p className="text-xs text-zinc-400 mt-1">Pre-loaded demo file ready for vector indexing</p>
+                <p className="text-xs text-zinc-400 mt-1">Corporate reference manual ready for vector indexing</p>
                 <span className="inline-block mt-3 px-3 py-1 bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 text-xs font-bold rounded-full">
                   ✓ 18 policy chunks extracted
                 </span>

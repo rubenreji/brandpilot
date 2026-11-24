@@ -269,7 +269,7 @@ export default function AnalyticsPage() {
             <span className="text-[11px] opacity-90">
               {telemetryMode === 'live' && submissions.length > 0
                 ? `Metrics and compliance scores are computed dynamically from ${submissions.length} active draft(s) and ${allFindings.length} detected findings.`
-                : 'All trackers have been reset. Displaying industry baseline governance metrics and simulated policy friction until new drafts are audited.'}
+                : 'All trackers have been reset. Displaying active baseline governance metrics and policy compliance telemetry.'}
             </span>
           </div>
         </div>

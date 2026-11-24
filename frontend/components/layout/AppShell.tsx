@@ -144,7 +144,7 @@ export function AppShell({ children }: AppShellProps) {
             href="/"
             className="text-zinc-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
           >
-            Landing Page <ExternalLink className="w-3 h-3 text-emerald-400" />
+            Public Portal <ExternalLink className="w-3 h-3 text-emerald-400" />
           </Link>
         </div>
       </div>
@@ -185,7 +185,7 @@ export function AppShell({ children }: AppShellProps) {
               <Building2 className="w-3.5 h-3.5 text-emerald-400" />
               <span className="font-bold text-white max-w-[130px] truncate">{currentWorkspace.name}</span>
               <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-emerald-950 text-[#00FF87] border border-emerald-800">
-                12 Bases
+                12 Workspaces
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
             </button>
@@ -196,7 +196,7 @@ export function AppShell({ children }: AppShellProps) {
                   <span className="font-bold uppercase tracking-wider text-emerald-400 text-[10px]">
                     Switch Brand Base
                   </span>
-                  <span className="text-zinc-500 text-[10px] font-mono">12 Pre-Seeded Brands</span>
+                  <span className="text-zinc-500 text-[10px] font-mono">12 Active Workspaces</span>
                 </div>
                 {allBrandBases.map(b => (
                   <button
@@ -380,7 +380,7 @@ export function AppShell({ children }: AppShellProps) {
                 {/* Account Manager: Persona Switcher */}
                 <div className="p-2 border-b border-emerald-950 bg-[#060B08]">
                   <div className="text-[10px] uppercase font-bold text-emerald-400/70 px-2 py-1 tracking-wider">
-                    Switch Account Persona
+                    Switch Active Role
                   </div>
                   {[
                     { id: 'user-admin-1', name: 'Ruben John Reji', role: 'admin', desc: 'Admin & System Owner' },
@@ -435,7 +435,7 @@ export function AppShell({ children }: AppShellProps) {
                     className="w-full text-left flex items-center gap-2 px-3.5 py-2 text-zinc-300 hover:text-emerald-400 hover:bg-emerald-950/40 transition-colors font-medium cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Reset Trackers to Zero</span>
+                    <span>Reset Local Session Telemetry</span>
                   </button>
                 </div>
 

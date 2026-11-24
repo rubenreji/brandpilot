@@ -1,0 +1,26 @@
+{
+  "name": "brandpilot-workspace",
+  "version": "1.0.0",
+  "description": "BrandPilot — AI-Assisted Brand Governance and Content Intelligence Platform",
+  "scripts": {
+    "start": "npm --prefix brandpilot/frontend run start",
+    "dev": "npm --prefix brandpilot/frontend run dev",
+    "build": "npm --prefix brandpilot/frontend run build",
+    "test:backend": "brandpilot/backend/.venv/Scripts/python.exe brandpilot/backend/tests/test_integration_e2e.py",
+    "setup:supabase": "python brandpilot/setup_supabase.py"
+  },
+  "keywords": [
+    "brandpilot",
+    "brand-governance",
+    "rag",
+    "pgvector",
+    "fastapi",
+    "nextjs"
+  ],
+  "author": "Ruben John Reji",
+  "license": "MIT",
+  "dependencies": {
+    "mammoth": "^1.13.0",
+    "pdf-parse": "^2.4.5"
+  }
+}

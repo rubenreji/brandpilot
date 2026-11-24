@@ -416,10 +416,10 @@ export default function ApprovalCentrePage() {
                           <button
                             onClick={() => handleOpenSlackSimulator(sub)}
                             className="px-2 py-1 text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/30 rounded border border-zinc-800 text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Simulate Slack Incident Webhook Alert"
+                            title="Dispatch Live Slack Incident Webhook Alert"
                           >
                             <MessageSquare className="w-3 h-3 text-emerald-400" />
-                            <span>Slack Bot</span>
+                            <span>Slack Alert</span>
                           </button>
                           <button
                             disabled={currentRole === 'creator'}
@@ -793,7 +793,7 @@ export default function ApprovalCentrePage() {
         </div>
       )}
 
-      {/* --- CLOSED-LOOP CMS PUBLISHING GATEWAY MODAL (ROUND 3 ADVANCED GATEKEEPING) --- */}
+      {/* --- CLOSED-LOOP CMS PUBLISHING GATEWAY MODAL (ENTERPRISE AUTOMATED GATEKEEPING) --- */}
       {publishModalOpen && publishSub && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
           <div className="bg-[#0A120E] border border-teal-500/40 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">

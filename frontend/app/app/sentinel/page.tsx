@@ -96,7 +96,7 @@ export default function BrandSentinelPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-emerald-950/80">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest mb-1.5">
-            <Radar className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+            <Radar className="w-3.5 h-3.5 text-emerald-400" />
             <span>{currentWorkspace.name}</span>
             <span>•</span>
             <span>Continuous Public Brand Surveillance</span>

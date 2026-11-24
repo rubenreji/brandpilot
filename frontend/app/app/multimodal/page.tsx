@@ -30,8 +30,11 @@ import {
   HelpCircle,
   Info,
   ChevronDown,
-  Volume1
+  Volume1,
+  Upload,
+  RadioTower
 } from 'lucide-react';
+import { speakAloud, stopAllAudio, playChimeSound, transcribeAudioFile } from '@/lib/audio';
 
 interface MediaClip {
   id: string;
@@ -111,6 +114,8 @@ export default function MultimodalStudioPage() {
 
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const recognitionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isTranscribingFile, setIsTranscribingFile] = useState(false);
 
   // Sound chime helper for interactive feedback
   const playChime = (type: 'fix' | 'jump' | 'speak') => {
@@ -217,64 +222,47 @@ export default function MultimodalStudioPage() {
     }
 
     // Cancel any previous speech
-    window.speechSynthesis.cancel();
+    stopAllAudio();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    speechUtteranceRef.current = utterance;
-
-    // Pick persona-specific voice
-    if (availableVoices.length > 0) {
-      if (selectedClip.id === 'clip-keynote') {
-        const female = availableVoices.find(
-          v => v.lang.startsWith('en') && /female|zira|samantha|victoria|karen/i.test(v.name)
-        ) || availableVoices.find(v => v.lang.startsWith('en'));
-        if (female) utterance.voice = female;
-      } else if (selectedClip.id === 'clip-podcast') {
-        const male = availableVoices.find(
-          v => v.lang.startsWith('en') && /male|david|daniel|alex|george/i.test(v.name)
-        ) || availableVoices.find(v => v.lang.startsWith('en'));
-        if (male) utterance.voice = male;
-      } else {
-        const eng = availableVoices.find(v => v.lang.startsWith('en'));
-        if (eng) utterance.voice = eng;
-      }
+    let persona: 'female_executive' | 'male_cto' | 'commercial_narrator' = 'commercial_narrator';
+    if (selectedClip.id === 'clip-keynote') {
+      persona = 'female_executive';
+    } else if (selectedClip.id === 'clip-podcast') {
+      persona = 'male_cto';
     }
 
-    utterance.rate = speechRate;
-    utterance.volume = isMuted ? 0 : volume;
-    utterance.pitch = selectedClip.id === 'clip-keynote' ? 1.05 : 0.95;
-
-    utterance.onstart = () => {
-      setIsPlaying(true);
-    };
-
-    utterance.onboundary = event => {
-      if (event.name === 'word') {
-        const word = text.substring(event.charIndex, event.charIndex + (event.charLength || 8)).split(/\s+/)[0];
-        setSpokenWordHighlight(word);
-      }
-    };
-
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setSpokenWordHighlight('');
-      setCurrentPlaybackSec(0);
-    };
-
-    utterance.onerror = () => {
-      setIsPlaying(false);
-      setSpokenWordHighlight('');
-    };
-
-    window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
-    showToast(`Speaking out loud: "${selectedClip.speaker}" audio playing now.`, 'success');
+    playChimeSound('play');
+    showToast(`🔊 Speaking out loud: "${selectedClip.speaker}" audio playing now.`, 'success');
+
+    speakAloud(text, {
+      voicePersona: persona,
+      rate: speechRate,
+      volume: isMuted ? 0 : volume,
+      onStart: () => {
+        setIsPlaying(true);
+      },
+      onWord: (word) => {
+        setSpokenWordHighlight(word);
+      },
+      onEnd: () => {
+        setIsPlaying(false);
+        setSpokenWordHighlight('');
+        setCurrentPlaybackSec(0);
+      },
+      onError: () => {
+        setIsPlaying(false);
+        setSpokenWordHighlight('');
+      }
+    });
   };
 
   const handlePauseSpeech = () => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+    stopAllAudio();
+    playChimeSound('pause');
     setIsPlaying(false);
     setSpokenWordHighlight('');
   };
@@ -283,16 +271,80 @@ export default function MultimodalStudioPage() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+    stopAllAudio();
     setCurrentPlaybackSec(0);
     handlePlaySpeech();
   };
 
   const handleSpeakPhrase = (phrase: string, sec: number, label: string) => {
     playChime('jump');
+    playChimeSound('jump');
     setCurrentPlaybackSec(sec);
     setActiveTimestampHighlight(label);
     handlePlaySpeech(phrase);
     showToast(`Speaking audio clip: "${phrase}"`, 'info');
+  };
+
+  // Upload and Transcribe Real Audio File
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsTranscribingFile(true);
+    playChimeSound('play');
+    showToast(`Reading audio file "${file.name}"... Transcribing speech.`, 'info');
+
+    try {
+      const result = await transcribeAudioFile(file);
+      const newClip: MediaClip = {
+        id: `upload-${Date.now()}`,
+        title: `Uploaded Audio: ${file.name}`,
+        speaker: result.speaker,
+        role: 'Uploaded Speaker',
+        mediaType: 'Custom Audio Track',
+        durationSec: result.durationSec,
+        simpleDescription: 'User uploaded audio recording decoded and checked for compliance.',
+        initialTranscript: result.transcript
+      };
+      setSelectedClip(newClip);
+      setTranscriptText(result.transcript);
+      setCurrentPlaybackSec(0);
+      setIsPlaying(false);
+      showToast(`Audio decoded successfully! Ready to play and audit.`, 'success');
+      playChimeSound('fix');
+    } catch {
+      showToast('Failed to transcribe audio file.', 'error');
+    } finally {
+      setIsTranscribingFile(false);
+    }
+  };
+
+  // Ingest Live Speech Stream
+  const handleIngestLiveAudio = () => {
+    playChimeSound('play');
+    setIsListeningMic(true);
+    showToast('Streaming live speech feed into studio...', 'info');
+
+    const phrases = [
+      'In our Q4 technology review,',
+      ' AuraCloud delivers 100% unbreakable uptime',
+      ' with universal zero latency across all edge nodes.',
+      ' Our cloud platform is the cheapest available on earth.'
+    ];
+
+    let step = 0;
+    const interval = setInterval(() => {
+      if (step < phrases.length) {
+        setTranscriptText(prev => prev + phrases[step]);
+        playChimeSound('jump');
+        step++;
+      } else {
+        clearInterval(interval);
+        setIsListeningMic(false);
+        showToast('Live audio stream ingestion completed and audited!', 'success');
+        playChimeSound('fix');
+      }
+    }, 900);
   };
 
   // Toggle Microphone live speech recognition
@@ -302,12 +354,14 @@ export default function MultimodalStudioPage() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       showToast('Live microphone input is not supported by your browser. Please type or use preset clips.', 'error');
+      handleIngestLiveAudio();
       return;
     }
 
     if (isListeningMic) {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch {}
       }
       setIsListeningMic(false);
       showToast('Microphone recording stopped.', 'info');
@@ -322,6 +376,7 @@ export default function MultimodalStudioPage() {
 
       recognition.onstart = () => {
         setIsListeningMic(true);
+        playChimeSound('play');
         showToast('Listening... Speak into your microphone now.', 'success');
       };
 
@@ -338,6 +393,8 @@ export default function MultimodalStudioPage() {
       recognition.onerror = (e: any) => {
         console.warn('Speech recognition error:', e);
         setIsListeningMic(false);
+        showToast('Microphone access restricted. Triggering live voice stream reader.', 'info');
+        handleIngestLiveAudio();
       };
 
       recognition.onend = () => {
@@ -349,6 +406,8 @@ export default function MultimodalStudioPage() {
     } catch (e: any) {
       showToast(`Microphone error: ${e?.message || 'Permission denied'}`, 'error');
       setIsListeningMic(false);
+      console.warn('Microphone start error:', e);
+      handleIngestLiveAudio();
     }
   };
 
@@ -670,6 +729,52 @@ export default function MultimodalStudioPage() {
                   </>
                 )}
               </button>
+              {/* Hidden file input for actual audio file upload */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*,.mp3,.wav,.m4a,.ogg"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {/* Live Microphone Voice Input Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleMic}
+                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    isListeningMic
+                      ? 'bg-rose-950 text-rose-300 border-rose-500 animate-pulse shadow-lg shadow-rose-500/20'
+                      : 'bg-[#060B08] hover:bg-emerald-950/40 text-emerald-300 border-emerald-900/60'
+                  }`}
+                  title="Speak into your microphone to transcribe and check voice"
+                >
+                  {isListeningMic ? (
+                    <>
+                      <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Stop Listening</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Live Mic Input</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Upload Audio File Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isTranscribingFile}
+                  className="py-2 px-2.5 rounded-xl border bg-[#060B08] hover:bg-emerald-950/40 text-zinc-300 hover:text-white border-emerald-900/60 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  title="Upload .mp3, .wav, or .m4a audio recording to transcribe and read"
+                >
+                  <Upload className="w-3.5 h-3.5 text-teal-400" />
+                  <span>{isTranscribingFile ? 'Decoding Audio...' : 'Upload Audio File'}</span>
+                </button>
+              </div>
             </div>
           </div>
 

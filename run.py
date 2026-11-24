@@ -105,6 +105,7 @@ def start_servers():
         while True:
             for p in processes:
                 if p.poll() is not None:
+                    # One of the processes crashed or stopped
                     print(f"Process {p.args} exited with code {p.returncode}")
                     return
             time.sleep(1)

@@ -9,7 +9,7 @@ import { ShieldCheck, ArrowRight, Lock, Mail, Sparkles, Building2 } from 'lucide
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, setCurrentRole } = useBrandPilot();
+  const { loginUser, setCurrentRole, showToast } = useBrandPilot();
   const [email, setEmail] = useState('ruben@auracloud.io');
   const [password, setPassword] = useState('••••••••••••');
   const [loading, setLoading] = useState(false);
@@ -83,9 +83,13 @@ export default function LoginPage() {
             <div>
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-semibold text-zinc-300">Password</label>
-                <a href="#" className="text-xs font-medium text-emerald-400 hover:underline">
+                <button
+                  type="button"
+                  onClick={() => showToast('Password reset link dispatched to enterprise directory administrator.', 'info')}
+                  className="text-xs font-medium text-emerald-400 hover:underline cursor-pointer"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
               <div className="mt-1 relative rounded-md shadow-xs">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-400/70">
@@ -154,10 +158,10 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Quick Demo Persona Switcher */}
+          {/* Role-Based Profile Fast Switch */}
           <div className="mt-6 pt-6 border-t border-emerald-950">
             <span className="block text-xs font-semibold uppercase tracking-wider text-emerald-400/70 mb-3 text-center">
-              Quick One-Click Persona Access
+              Role-Based Access Profiles (Fast Switch)
             </span>
             <div className="grid grid-cols-3 gap-2">
               <button

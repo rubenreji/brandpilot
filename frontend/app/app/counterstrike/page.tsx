@@ -33,67 +33,125 @@ interface CompetitorTarget {
   safeHarborDisclosure: string;
 }
 
-export default function CounterStrikePage() {
-  const { currentWorkspace } = useBrandPilot();
-  const [selectedTargetId, setSelectedTargetId] = useState<string>('comp-1');
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [downloadingDossier, setDownloadingDossier] = useState(false);
-
-  const competitors: CompetitorTarget[] = [
-    {
-      id: 'comp-1',
-      name: 'Legacy Cloud Corp',
-      tickerOrSlug: 'NYSE: LCC',
-      marketShare: '34% Enterprise Segment',
-      vulnerabilityScore: 92,
-      unsubstantiatedClaim: '"The world\'s only 100% unbreakable cloud with zero minutes of downtime in company history."',
-      claimSourceUrl: 'https://legacycloudcorp.com/pricing',
-      ftcLegalExposure: 'FTC Act § 5 False Advertising Violation. Third-party Downdetector logs record 4 documented multi-region outages in 2025. Absolute claim is legally indefensible.',
-      counterStrikeAngle: 'Transparent Engineering vs. False Absolutes',
-      recommendedAdCopy: `Tired of fairy tales about "unbreakable" clouds?
+const DEFAULT_COMPETITORS: CompetitorTarget[] = [
+  {
+    id: 'comp-1',
+    name: 'Legacy Cloud Corp',
+    tickerOrSlug: 'NYSE: LCC',
+    marketShare: '34% Enterprise Segment',
+    vulnerabilityScore: 92,
+    unsubstantiatedClaim: '"The world\'s only 100% unbreakable cloud with zero minutes of downtime in company history."',
+    claimSourceUrl: 'https://legacycloudcorp.com/pricing',
+    ftcLegalExposure: 'FTC Act § 5 False Advertising Violation. Third-party Downdetector logs record 4 documented multi-region outages in 2025. Absolute claim is legally indefensible.',
+    counterStrikeAngle: 'Transparent Engineering vs. False Absolutes',
+    recommendedAdCopy: `Tired of fairy tales about "unbreakable" clouds?
 
 While legacy providers promise zero downtime and secretly suffer outages, AuraCloud is built on transparent reality: 99.99% high-availability multi-region redundancy backed by contractually enforced SLAs.
 
 Don't settle for marketing hype. Choose verified infrastructure.`,
-      safeHarborDisclosure: '*Availability comparisons based on public incident reports published across Q1-Q3 2025.'
-    },
-    {
-      id: 'comp-2',
-      name: 'HyperScale X',
-      tickerOrSlug: 'NASDAQ: HYPX',
-      marketShare: '22% Enterprise Segment',
-      vulnerabilityScore: 84,
-      unsubstantiatedClaim: '"Guaranteed to reduce your annual cloud compute bill by a minimum of 75% overnight."',
-      claimSourceUrl: 'https://hyperscalex.io/enterprise',
-      ftcLegalExposure: 'FTC Guides Concerning Deceptive Pricing & Endorsements. Fails to disclose that 75% savings requires 3-year upfront reserved capacity contracts.',
-      counterStrikeAngle: 'No Lock-In Pay-As-You-Go vs. Predatory Multi-Year Traps',
-      recommendedAdCopy: `The 75% discount that ends up costing you double.
+    safeHarborDisclosure: '*Availability comparisons based on public incident reports published across Q1-Q3 2025.'
+  },
+  {
+    id: 'comp-2',
+    name: 'HyperScale X',
+    tickerOrSlug: 'NASDAQ: HYPX',
+    marketShare: '22% Enterprise Segment',
+    vulnerabilityScore: 84,
+    unsubstantiatedClaim: '"Guaranteed to reduce your annual cloud compute bill by a minimum of 75% overnight."',
+    claimSourceUrl: 'https://hyperscalex.io/enterprise',
+    ftcLegalExposure: 'FTC Guides Concerning Deceptive Pricing & Endorsements. Fails to disclose that 75% savings requires 3-year upfront reserved capacity contracts.',
+    counterStrikeAngle: 'No Lock-In Pay-As-You-Go vs. Predatory Multi-Year Traps',
+    recommendedAdCopy: `The 75% discount that ends up costing you double.
 
 Ever read the fine print on HyperScale X's "instant" savings? You're locked into a 3-year upfront commitment with zero flexibility. 
 
 AuraCloud provides honest, transparent pay-per-compute pricing with zero contractual lock-in. Scale on your own terms.`,
-      safeHarborDisclosure: '†Cost modeling based on standard on-demand benchmark workloads.'
-    },
-    {
-      id: 'comp-3',
-      name: 'DataVantage Systems',
-      tickerOrSlug: 'Private Equity Backed',
-      marketShare: '14% Mid-Market Segment',
-      vulnerabilityScore: 78,
-      unsubstantiatedClaim: '"100% Zero-Carbon Neutral Datacenters worldwide."',
-      claimSourceUrl: 'https://datavantage.tech/sustainability',
-      ftcLegalExposure: 'EU Green Claims Directive (COM/2023/166) Violation. Relies on uncertified third-party deforestation offsets without ISO 14064 lifecycle verification.',
-      counterStrikeAngle: 'Certified Renewable Energy vs. Unverified Greenwashing',
-      recommendedAdCopy: `True Net-Zero Isn't Bought With Cheap Offsets.
+    safeHarborDisclosure: '†Cost modeling based on standard on-demand benchmark workloads.'
+  },
+  {
+    id: 'comp-3',
+    name: 'DataVantage Systems',
+    tickerOrSlug: 'Private Equity Backed',
+    marketShare: '14% Mid-Market Segment',
+    vulnerabilityScore: 78,
+    unsubstantiatedClaim: '"100% Zero-Carbon Neutral Datacenters worldwide."',
+    claimSourceUrl: 'https://datavantage.tech/sustainability',
+    ftcLegalExposure: 'EU Green Claims Directive (COM/2023/166) Violation. Relies on uncertified third-party deforestation offsets without ISO 14064 lifecycle verification.',
+    counterStrikeAngle: 'Certified Renewable Energy vs. Unverified Greenwashing',
+    recommendedAdCopy: `True Net-Zero Isn't Bought With Cheap Offsets.
 
 Don't let greenwashed marketing cloud your corporate ESG commitments. AuraCloud powers your infrastructure with 100% certified Gold Standard renewable energy credits.
 
 Real sustainability. Real third-party audits.`,
-      safeHarborDisclosure: '‡Emissions calculations verified via Gold Standard registry serial allocations.'
-    }
-  ];
+    safeHarborDisclosure: '‡Emissions calculations verified via Gold Standard registry serial allocations.'
+  }
+];
+
+export default function CounterStrikePage() {
+  const { currentWorkspace, showToast } = useBrandPilot();
+  const [competitors, setCompetitors] = useState<CompetitorTarget[]>(DEFAULT_COMPETITORS);
+  const [selectedTargetId, setSelectedTargetId] = useState<string>('comp-1');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [downloadingDossier, setDownloadingDossier] = useState(false);
+
+  // Live Competitor Analyzer Form State
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customUrl, setCustomUrl] = useState('');
+  const [customClaim, setCustomClaim] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const activeTarget = competitors.find(c => c.id === selectedTargetId) || competitors[0];
+
+  const handleAnalyzeCompetitor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customName.trim() || !customClaim.trim()) {
+      showToast('Please enter both competitor name and their marketing claim.', 'error');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/counterstrike/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          competitor_name: customName.trim(),
+          claim: customClaim.trim()
+        })
+      });
+
+      if (!res.ok) throw new Error('Analysis failed');
+      const data = await res.json();
+
+      const newId = `comp-live-${Date.now()}`;
+      const newCompetitor: CompetitorTarget = {
+        id: newId,
+        name: data.competitor || customName.trim(),
+        tickerOrSlug: 'LIVE AUDITED',
+        marketShare: 'Direct Industry Rival',
+        vulnerabilityScore: data.vulnerability_score || 88,
+        unsubstantiatedClaim: `"${customClaim.trim()}"`,
+        claimSourceUrl: customUrl.trim() || 'https://competitor.com/landing',
+        ftcLegalExposure: data.legal_exposure || 'FTC Act Section 5 Violation: Unsubstantiated performance claim.',
+        counterStrikeAngle: data.counter_angle || 'Verified Reliability vs Marketing Hype',
+        recommendedAdCopy: data.counter_ad_copy || `Looking for verified enterprise performance? AuraCloud delivers transparent, SLA-backed infrastructure.`,
+        safeHarborDisclosure: data.mandatory_disclaimer || '*Based on publicly available product documentation.'
+      };
+
+      setCompetitors(prev => [newCompetitor, ...prev]);
+      setSelectedTargetId(newId);
+      setIsFormOpen(false);
+      setCustomName('');
+      setCustomUrl('');
+      setCustomClaim('');
+      showToast(`Analyzed ${newCompetitor.name}: ${newCompetitor.vulnerabilityScore}% exposure detected!`, 'success');
+    } catch {
+      showToast('Error analyzing competitor claim. Please try again.', 'error');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleCopy = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -146,15 +204,94 @@ Real sustainability. Real third-party audits.`,
 
         <div className="flex items-center gap-2.5">
           <button
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="px-4 py-2 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-[#00FF87]" />
+            {isFormOpen ? 'Close Live Scanner' : 'Analyze New Competitor'}
+          </button>
+
+          <button
             onClick={handleDownloadDossier}
             disabled={downloadingDossier}
-            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,255,135,0.25)]"
+            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,255,135,0.25)] cursor-pointer"
           >
             <Download className="w-4 h-4" />
             {downloadingDossier ? 'Generating Dossier...' : 'Export Legal Intelligence Dossier'}
           </button>
         </div>
       </div>
+
+      {/* Live Competitor Claim Ingestion Form */}
+      {isFormOpen && (
+        <form onSubmit={handleAnalyzeCompetitor} className="p-5 rounded-2xl bg-[#080E0B] border-2 border-emerald-500/50 shadow-2xl space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-emerald-950">
+            <div className="flex items-center gap-2">
+              <Crosshair className="w-4 h-4 text-[#00FF87]" />
+              <h3 className="text-sm font-bold text-white">Live Competitor Claim Reconnaissance Engine</h3>
+            </div>
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+              FTC Act § 5 Automated Analyzer
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-zinc-300 block mb-1">Competitor Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Acme Cloud Corp, RivalStack, HyperScale"
+                value={customName}
+                onChange={e => setCustomName(e.target.value)}
+                className="w-full text-xs p-2.5 rounded-lg bg-[#050806] border border-emerald-950 text-white focus:border-emerald-500 focus:outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-zinc-300 block mb-1">Target Landing Page URL or Source (Optional)</label>
+              <input
+                type="text"
+                placeholder="https://competitor.com/pricing"
+                value={customUrl}
+                onChange={e => setCustomUrl(e.target.value)}
+                className="w-full text-xs p-2.5 rounded-lg bg-[#050806] border border-emerald-950 text-white focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-zinc-300 block mb-1">
+              Public Marketing Claim / Slogan / Superlative Ad Copy to Audit
+            </label>
+            <textarea
+              rows={3}
+              placeholder="e.g. 'The world's only 100% unbreakable cloud guaranteed with 0% packet loss and 75% cheaper rates.'"
+              value={customClaim}
+              onChange={e => setCustomClaim(e.target.value)}
+              className="w-full text-xs p-2.5 rounded-lg bg-[#050806] border border-emerald-950 text-white focus:border-emerald-500 focus:outline-none"
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-zinc-400 hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isAnalyzing}
+              className="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-xs font-black flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,135,0.3)] cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {isAnalyzing ? 'Analyzing Claim via FTC Rules...' : 'Audit Claim & Synthesize Counter-Ad'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Competitor Target Selector Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

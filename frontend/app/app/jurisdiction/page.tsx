@@ -14,7 +14,10 @@ import {
   Sparkles,
   ArrowRight,
   Info,
-  Check
+  Check,
+  Plus,
+  Send,
+  Trash2
 } from 'lucide-react';
 
 interface JurisdictionRule {
@@ -40,10 +43,69 @@ interface TranslationAuditItem {
   notes: string;
 }
 
+const INITIAL_TRANSLATION_AUDITS: TranslationAuditItem[] = [
+  {
+    id: 't-1',
+    language: 'Spanish (Latin America & Spain)',
+    localeCode: 'es-ES / es-MX',
+    flag: '🇪🇸',
+    sourceEnglish: 'AuraCloud delivers high-availability enterprise governance with SLA-backed uptime.',
+    translatedCopy: 'AuraCloud ofrece gobernanza empresarial de alta disponibilidad con tiempo de actividad respaldado por SLA.',
+    status: 'passed',
+    notes: 'Terminology aligned with Latin American and European Spanish legal definitions.'
+  },
+  {
+    id: 't-2',
+    language: 'German (DACH Region)',
+    localeCode: 'de-DE',
+    flag: '🇩🇪',
+    sourceEnglish: 'Zero downtime guaranteed with automated multi-zone failover.*',
+    translatedCopy: 'Garantierte null Ausfallzeiten durch automatische Ausfallsicherung.*',
+    status: 'warning',
+    notes: 'UWG (Gesetz gegen den unlauteren Wettbewerb) Warning: German courts prohibit absolute guarantees ("null Ausfallzeiten") without explicit asterisk disclaimers in identical font size.'
+  },
+  {
+    id: 't-3',
+    language: 'French (France & Canada)',
+    localeCode: 'fr-FR',
+    flag: '🇫🇷',
+    sourceEnglish: 'Accelerate brand compliance reviews by up to 8x.',
+    translatedCopy: 'Accélérez les examens de conformité de marque jusqu’à 8 fois.',
+    status: 'passed',
+    notes: 'Toubon Law compliance verified: All technical marketing terms provided in verified French.'
+  },
+  {
+    id: 't-4',
+    language: 'Japanese (APAC Headquarters)',
+    localeCode: 'ja-JP',
+    flag: '🇯🇵',
+    sourceEnglish: 'Committed to certified net-zero carbon operational emissions.',
+    translatedCopy: '認証済みの運用時ネットゼロカーボン排出量削減への取り組み。',
+    status: 'passed',
+    notes: 'Complies with METI / Consumer Affairs Agency environmental representation guidelines.'
+  }
+];
+
+const SUPPORTED_LOCALES = [
+  { code: 'es-ES', label: 'Spanish (es-ES / es-MX)', flag: '🇪🇸' },
+  { code: 'de-DE', label: 'German (de-DE)', flag: '🇩🇪' },
+  { code: 'fr-FR', label: 'French (fr-FR)', flag: '🇫🇷' },
+  { code: 'ja-JP', label: 'Japanese (ja-JP)', flag: '🇯🇵' },
+  { code: 'it-IT', label: 'Italian (it-IT)', flag: '🇮🇹' },
+  { code: 'pt-BR', label: 'Portuguese (pt-BR)', flag: '🇧🇷' }
+];
+
 export default function MultiJurisdictionPage() {
   const { currentWorkspace } = useBrandPilot();
   const [selectedCountry, setSelectedCountry] = useState<string>('us');
   const [activeTab, setActiveTab] = useState<'matrix' | 'translation'>('matrix');
+  const [translationItems, setTranslationItems] = useState<TranslationAuditItem[]>(INITIAL_TRANSLATION_AUDITS);
+
+  // Custom translation form state
+  const [selectedLocale, setSelectedLocale] = useState('de-DE');
+  const [customEnglish, setCustomEnglish] = useState('');
+  const [customTranslation, setCustomTranslation] = useState('');
+  const [isAuditing, setIsAuditing] = useState(false);
 
   const jurisdictions: JurisdictionRule[] = [
     {
@@ -115,48 +177,60 @@ export default function MultiJurisdictionPage() {
     }
   ];
 
-  const translationAudits: TranslationAuditItem[] = [
-    {
-      id: 't-1',
-      language: 'Spanish (Latin America & Spain)',
-      localeCode: 'es-ES / es-MX',
-      flag: '🇪🇸',
-      sourceEnglish: 'AuraCloud delivers high-availability enterprise governance with SLA-backed uptime.',
-      translatedCopy: 'AuraCloud ofrece gobernanza empresarial de alta disponibilidad con tiempo de actividad respaldado por SLA.',
-      status: 'passed',
-      notes: 'Terminology aligned with Latin American and European Spanish legal definitions.'
-    },
-    {
-      id: 't-2',
-      language: 'German (DACH Region)',
-      localeCode: 'de-DE',
-      flag: '🇩🇪',
-      sourceEnglish: 'Zero downtime guaranteed with automated multi-zone failover.*',
-      translatedCopy: 'Garantierte null Ausfallzeiten durch automatische Ausfallsicherung.*',
-      status: 'warning',
-      notes: 'UWG (Gesetz gegen den unlauteren Wettbewerb) Warning: German courts prohibit absolute guarantees ("null Ausfallzeiten") without explicit asterisk disclaimers in identical font size.'
-    },
-    {
-      id: 't-3',
-      language: 'French (France & Canada)',
-      localeCode: 'fr-FR',
-      flag: '🇫🇷',
-      sourceEnglish: 'Accelerate brand compliance reviews by up to 8x.',
-      translatedCopy: 'Accélérez les examens de conformité de marque jusqu’à 8 fois.',
-      status: 'passed',
-      notes: 'Toubon Law compliance verified: All technical marketing terms provided in verified French.'
-    },
-    {
-      id: 't-4',
-      language: 'Japanese (APAC Headquarters)',
-      localeCode: 'ja-JP',
-      flag: '🇯🇵',
-      sourceEnglish: 'Committed to certified net-zero carbon operational emissions.',
-      translatedCopy: '認証済みの運用時ネットゼロカーボン排出量削減への取り組み。',
-      status: 'passed',
-      notes: 'Complies with METI / Consumer Affairs Agency environmental representation guidelines.'
-    }
-  ];
+  const handleAuditTranslation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customEnglish.trim() || !customTranslation.trim()) return;
+
+    setIsAuditing(true);
+
+    setTimeout(() => {
+      const localeObj = SUPPORTED_LOCALES.find(l => l.code === selectedLocale) || SUPPORTED_LOCALES[1];
+      const combined = (customEnglish + ' ' + customTranslation).toLowerCase();
+
+      // Check for prohibited superlatives and regulatory watchwords
+      const hasAbsoluteSuperlative = /100%|guarantee|garantiert|null ausfallzeiten|unbreakable|zero downtime|cheapest|#1|best in the world|cure/.test(combined);
+      const hasMissingDisclaimer = !combined.includes('*') && !combined.includes('†') && (combined.includes('sla') || combined.includes('save') || combined.includes('uptime'));
+
+      let status: 'passed' | 'warning' = 'passed';
+      let notes = `Verified statutory clearance for ${localeObj.label}. Safe-harbor phrasing conforms to regional fair advertising directives.`;
+
+      if (hasAbsoluteSuperlative) {
+        status = 'warning';
+        if (selectedLocale === 'de-DE') {
+          notes = 'UWG § 3 / § 5 Violation Warning: German courts prohibit absolute or unreserved efficiency claims ("garantiert" / "null") without immediate prominent qualifiers.';
+        } else if (selectedLocale === 'fr-FR') {
+          notes = 'Loi Toubon & Code de la consommation Warning: Absolute commercial claims require certified third-party testing disclosures and strict French terminology.';
+        } else if (selectedLocale === 'ja-JP') {
+          notes = 'Consumer Affairs Agency (CAA) Warning: Unsubstantiated superlative representations trigger statutory surcharges under the Premiums and Representations Act.';
+        } else {
+          notes = 'Regulatory Caution: Absolute superlatives or unreserved performance guarantees violate statutory false advertising regulations in this jurisdiction.';
+        }
+      } else if (hasMissingDisclaimer) {
+        status = 'warning';
+        notes = 'Disclaimer Advisory: Quantitative SLA or savings metrics detected without corresponding footnote disclaimer (* or †) required by regional trade regulators.';
+      }
+
+      const newItem: TranslationAuditItem = {
+        id: `t-${Date.now()}`,
+        language: localeObj.label,
+        localeCode: localeObj.code,
+        flag: localeObj.flag,
+        sourceEnglish: customEnglish.trim(),
+        translatedCopy: customTranslation.trim(),
+        status,
+        notes
+      };
+
+      setTranslationItems(prev => [newItem, ...prev]);
+      setCustomEnglish('');
+      setCustomTranslation('');
+      setIsAuditing(false);
+    }, 600);
+  };
+
+  const handleDeleteAudit = (id: string) => {
+    setTranslationItems(prev => prev.filter(t => t.id !== id));
+  };
 
   const activeJurisdiction = jurisdictions.find(j => j.id === selectedCountry) || jurisdictions[0];
 
@@ -295,7 +369,7 @@ export default function MultiJurisdictionPage() {
 
       {/* VIEW 2: TRANSLATION COMPLIANCE CHECKER */}
       {activeTab === 'translation' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="bg-[#080E0B] border border-emerald-950 rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Languages className="w-4 h-4 text-emerald-400" />
@@ -304,8 +378,84 @@ export default function MultiJurisdictionPage() {
             <span className="text-xs text-zinc-400">Audits localized copy for regional advertising compliance and disclaimer retention</span>
           </div>
 
+          {/* Interactive Custom Localization Audit Form */}
+          <div className="bg-[#0A110D] border border-emerald-950/90 rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-emerald-950 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#00FF87]" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Audit Custom Localized Copy
+                </h3>
+              </div>
+              <span className="text-[11px] text-zinc-400">Live statutory checks against regional ad laws</span>
+            </div>
+
+            <form onSubmit={handleAuditTranslation} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-1">
+                  <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                    Target Territory &amp; Language
+                  </label>
+                  <select
+                    value={selectedLocale}
+                    onChange={(e) => setSelectedLocale(e.target.value)}
+                    className="w-full bg-[#050806] border border-emerald-950 focus:border-[#00FF87] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                  >
+                    {SUPPORTED_LOCALES.map(loc => (
+                      <option key={loc.code} value={loc.code}>
+                        {loc.flag} {loc.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-2 flex items-end justify-end">
+                  <button
+                    type="submit"
+                    disabled={isAuditing || !customEnglish.trim() || !customTranslation.trim()}
+                    className="w-full md:w-auto px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {isAuditing ? 'Auditing Localization...' : 'Run Compliance Audit'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                    Source English Campaign Copy *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="Enter source English copy (e.g. 'AuraCloud delivers 99.99% high availability with zero data loss guarantee*')"
+                    value={customEnglish}
+                    onChange={(e) => setCustomEnglish(e.target.value)}
+                    className="w-full bg-[#050806] border border-emerald-950 focus:border-[#00FF87] rounded-lg p-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                    Localized Target Translation *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="Enter translated copy in the selected target language..."
+                    value={customTranslation}
+                    onChange={(e) => setCustomTranslation(e.target.value)}
+                    className="w-full bg-[#050806] border border-emerald-950 focus:border-[#00FF87] rounded-lg p-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Audit Results Feed */}
           <div className="space-y-4">
-            {translationAudits.map((item) => (
+            {translationItems.map((item) => (
               <div
                 key={item.id}
                 className="bg-[#0A110D] border border-emerald-950 rounded-xl p-5 space-y-3 shadow-md"
@@ -319,14 +469,23 @@ export default function MultiJurisdictionPage() {
                     </span>
                   </div>
 
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1 ${
-                    item.status === 'passed'
-                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
-                  }`}>
-                    {item.status === 'passed' ? <Check className="w-3 h-3 text-[#00FF87]" /> : <AlertTriangle className="w-3 h-3 text-amber-400" />}
-                    {item.status === 'passed' ? 'Compliant Localization' : 'Regulatory Caution'}
-                  </span>
+                  <div className="flex items-center gap-2.5">
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded flex items-center gap-1 ${
+                      item.status === 'passed'
+                        ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                    }`}>
+                      {item.status === 'passed' ? <Check className="w-3 h-3 text-[#00FF87]" /> : <AlertTriangle className="w-3 h-3 text-amber-400" />}
+                      {item.status === 'passed' ? 'Compliant Localization' : 'Regulatory Caution'}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteAudit(item.id)}
+                      className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                      title="Remove record"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">

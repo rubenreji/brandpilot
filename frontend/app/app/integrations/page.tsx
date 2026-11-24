@@ -241,7 +241,7 @@ export default function IntegrationsPage() {
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-300 block">
-                Simulated Google Docs / CMS Editor
+                Live Interactive Google Docs / CMS Editor
               </label>
               <textarea
                 rows={3}

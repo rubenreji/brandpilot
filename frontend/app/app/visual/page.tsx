@@ -237,9 +237,27 @@ export default function VisualIdentityPage() {
     showToast('Visual compliance inspection report exported as JSON!', 'success');
   };
 
-  // Quick fix simulator
+  // Quick fix remediation handler - genuinely mutates active visual report state
   const handleApplyRemediation = (finding: VisualFinding) => {
-    showToast(`Applied design fix: ${finding.remediation_action || 'Remediated element'}`, 'success');
+    if (activeVisualReport) {
+      const remainingFindings = (activeVisualReport.findings || []).filter(f => f.id !== finding.id);
+      const isNowClean = remainingFindings.length === 0;
+      const currentComposite = activeVisualReport.score?.composite_score || 80;
+      const newComposite = isNowClean ? 100 : Math.min(98, currentComposite + 12);
+      const newGrade = newComposite >= 90 ? 'A (Enterprise Compliant)' : newComposite >= 80 ? 'B (Minor Suggestions)' : 'C (Action Required)';
+
+      setActiveVisualReport({
+        ...activeVisualReport,
+        findings: remainingFindings,
+        score: {
+          ...activeVisualReport.score,
+          composite_score: newComposite,
+          compliance_grade: newGrade
+        }
+      });
+    }
+
+    showToast(`Applied design remediation: ${finding.remediation_action || 'Remediated visual element'}`, 'success');
     setSelectedFindingId(null);
   };
 
@@ -331,7 +349,7 @@ export default function VisualIdentityPage() {
               <span>Pick or Upload Graphic</span>
             </div>
             <p className="text-zinc-400 text-[11px] leading-relaxed">
-              Click a demo ad below, or click <strong>Upload Custom Graphic</strong> to test your own PNG or JPG design.
+              Select a benchmark creative below, or click <strong>Upload Custom Graphic</strong> to test your own PNG or JPG design.
             </p>
           </div>
           <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950">
@@ -365,7 +383,7 @@ export default function VisualIdentityPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mr-1">
                 <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Demo Creatives:</span>
+                <span>Benchmark Creatives:</span>
               </span>
 
               {visualPresets.map(preset => {
@@ -663,7 +681,11 @@ export default function VisualIdentityPage() {
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-emerald-950/60">
-                      <button type="button" className="px-5 py-2.5 rounded-xl bg-emerald-500 text-black font-black text-xs shadow-lg hover:bg-emerald-400 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => showToast('Simulated marketing CTA within verified compliant layout.', 'info')}
+                        className="px-5 py-2.5 rounded-xl bg-emerald-500 text-black font-black text-xs shadow-lg hover:bg-emerald-400 transition-colors cursor-pointer"
+                      >
                         Deploy Enterprise Cloud
                       </button>
                       <span className="text-[11px] font-mono text-zinc-500">
@@ -705,7 +727,11 @@ export default function VisualIdentityPage() {
                         <div className="text-sm font-black text-white">GET STARTED TODAY</div>
                         <div className="text-[11px] text-zinc-300">Promotional terms apply. Free trial.</div>
                       </div>
-                      <button type="button" className="px-4 py-2 bg-black text-white rounded-lg text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => showToast('Simulated promotional CTA within inspected ad graphic.', 'info')}
+                        className="px-4 py-2 bg-black text-white hover:bg-zinc-900 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                      >
                         Claim Discount
                       </button>
                     </div>

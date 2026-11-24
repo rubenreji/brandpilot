@@ -189,7 +189,7 @@ export default function LandingPage() {
         {/* Product UI Composition Preview */}
         <div className="mt-14 relative max-w-5xl mx-auto rounded-2xl p-1 bg-gradient-to-b from-emerald-500/30 via-emerald-900/20 to-[#0A120E] shadow-2xl border border-emerald-900/50">
           <div className="rounded-xl overflow-hidden bg-[#060B08] border border-emerald-950 text-left shadow-inner">
-            {/* Mock Window Header */}
+            {/* Studio Interface Preview Header */}
             <div className="px-4 py-3 bg-[#0A120E] border-b border-emerald-950 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-[0_0_6px_rgba(244,63,94,0.6)]"></span>

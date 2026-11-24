@@ -184,7 +184,7 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* Live Role Simulator & Active Persona Banner */}
+      {/* Active RBAC Persona Switcher */}
       <div className="bg-[#0A120E] border-2 border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3">
@@ -193,7 +193,7 @@ export default function TeamPage() {
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-zinc-400 uppercase tracking-wider font-bold">Live Active Persona:</span>
+                <span className="text-xs text-zinc-400 uppercase tracking-wider font-bold">Active Governance Persona:</span>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-black border ${roleCapabilities.badgeColor}`}>
                   {roleCapabilities.badge}
                 </span>

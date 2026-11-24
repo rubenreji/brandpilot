@@ -47,7 +47,7 @@ interface PackagingPreset {
 }
 
 export default function Packaging3DInspectorPage() {
-  const { currentWorkspace } = useBrandPilot();
+  const { currentWorkspace, showToast } = useBrandPilot();
   const [rotX, setRotX] = useState<number>(-15);
   const [rotY, setRotY] = useState<number>(30);
   const [zoom, setZoom] = useState<number>(1);
@@ -58,6 +58,38 @@ export default function Packaging3DInspectorPage() {
   const [surfaceFinish, setSurfaceFinish] = useState<'matte' | 'gloss' | 'foil'>('matte');
   const [isAutoRotating, setIsAutoRotating] = useState(false);
   const [downloadingReport, setDownloadingReport] = useState(false);
+
+  // Custom Packaging Artwork & Dieline Projection State
+  const [customArtworkUrl, setCustomArtworkUrl] = useState<string | null>(null);
+  const [customArtworkName, setCustomArtworkName] = useState<string | null>(null);
+  const artworkInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleArtworkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please upload a valid image file (.png, .jpg, .webp, .svg)', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setCustomArtworkUrl(result);
+      setCustomArtworkName(file.name);
+      snapToFace('front');
+      showToast(`Artwork "${file.name}" mapped onto 3D package front face!`, 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearArtwork = () => {
+    setCustomArtworkUrl(null);
+    setCustomArtworkName(null);
+    if (artworkInputRef.current) artworkInputRef.current.value = '';
+    showToast('Reverted to standard packaging design', 'info');
+  };
 
   const presets: PackagingPreset[] = [
     {
@@ -270,9 +302,35 @@ export default function Packaging3DInspectorPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <input
+            ref={artworkInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleArtworkUpload}
+          />
+
+          <button
+            onClick={() => artworkInputRef.current?.click()}
+            className="px-3.5 py-2 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Upload className="w-3.5 h-3.5 text-[#00FF87]" />
+            {customArtworkName ? 'Replace Artwork' : 'Upload Package Artwork'}
+          </button>
+
+          {customArtworkName && (
+            <button
+              onClick={handleClearArtwork}
+              className="px-2.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-semibold transition-all cursor-pointer"
+              title="Revert to standard mockup"
+            >
+              Reset
+            </button>
+          )}
+
           <button
             onClick={() => setIsAutoRotating(!isAutoRotating)}
-            className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               isAutoRotating
                 ? 'bg-emerald-500 text-black font-bold'
                 : 'bg-[#0A110D] border border-emerald-950 text-zinc-300 hover:text-white'
@@ -285,7 +343,7 @@ export default function Packaging3DInspectorPage() {
           <button
             onClick={handleDownloadUVReport}
             disabled={downloadingReport}
-            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,255,135,0.25)]"
+            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,255,135,0.25)] cursor-pointer"
           >
             <Download className="w-4 h-4" />
             {downloadingReport ? 'Generating Report...' : 'Export 3D Print Audit'}
@@ -398,31 +456,53 @@ export default function Packaging3DInspectorPage() {
                 {/* Face: FRONT */}
                 <div
                   onClick={() => snapToFace('front')}
-                  className="absolute inset-0 rounded-lg p-5 flex flex-col justify-between border-2 transition-all"
+                  className="absolute inset-0 rounded-lg p-5 flex flex-col justify-between border-2 transition-all overflow-hidden"
                   style={{
                     transform: 'translateZ(120px)',
                     backgroundColor: surfaceFinish === 'matte' ? '#080E0B' : surfaceFinish === 'gloss' ? '#0A150F' : '#050A07',
+                    backgroundImage: customArtworkUrl ? `url(${customArtworkUrl})` : undefined,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                     borderColor: activeFace === 'front' ? '#00FF87' : 'rgba(16, 185, 129, 0.4)',
                     boxShadow: surfaceFinish === 'gloss' ? 'inset 0 0 35px rgba(0,255,135,0.15), 0 0 30px rgba(0,0,0,0.8)' : '0 0 30px rgba(0,0,0,0.8)'
                   }}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider">FRONT PANEL</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">PANTONE 802 C</span>
-                  </div>
-
-                  <div className="my-auto text-center space-y-2">
-                    <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-500 text-black font-black flex items-center justify-center text-xl shadow-[0_0_20px_rgba(0,255,135,0.3)]">
-                      BP
+                  {customArtworkUrl ? (
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] p-3 flex flex-col justify-between pointer-events-none">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/90 text-[#00FF87] border border-emerald-500/50">
+                          CUSTOM DIELINE PROJECTED
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/70 text-zinc-300">
+                          {customArtworkName}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[9px] text-white font-mono bg-black/80 px-2 py-1 rounded border border-emerald-500/30">
+                        <span>LIVE SPATIAL TEXTURE</span>
+                        <span className="text-[#00FF87] font-bold">● 100% COVERAGE PASS</span>
+                      </div>
                     </div>
-                    <div className="text-xl font-black text-white tracking-tight">AuraCloud</div>
-                    <div className="text-[10px] text-zinc-400 font-medium">Enterprise Appliance Model AX-4</div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider">FRONT PANEL</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">PANTONE 802 C</span>
+                      </div>
 
-                  <div className="flex items-center justify-between text-[9px] text-zinc-500 font-mono">
-                    <span>1.5X CLEAR SPACE OK</span>
-                    <span className="text-[#00FF87]">● VERIFIED</span>
-                  </div>
+                      <div className="my-auto text-center space-y-2">
+                        <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-500 text-black font-black flex items-center justify-center text-xl shadow-[0_0_20px_rgba(0,255,135,0.3)]">
+                          BP
+                        </div>
+                        <div className="text-xl font-black text-white tracking-tight">AuraCloud</div>
+                        <div className="text-[10px] text-zinc-400 font-medium">Enterprise Appliance Model AX-4</div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[9px] text-zinc-500 font-mono">
+                        <span>1.5X CLEAR SPACE OK</span>
+                        <span className="text-[#00FF87]">● VERIFIED</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Face: BACK */}

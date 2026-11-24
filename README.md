@@ -204,16 +204,16 @@ BrandPilot enforces separation of concerns across enterprise publishing workflow
 
 ## 🧪 Verification & Test Suite
 
-BrandPilot includes comprehensive automated test coverage across deterministic rules, semantic scoring, and UI pipelines:
+BrandPilot includes comprehensive automated test coverage across deterministic rules, semantic scoring, full API routes, and UI pipelines:
 
 ```bash
-# Run backend audit test suite
-python brandpilot/backend/tests/test_audits.py
+# Run full automated platform verification suite (45/45 tests)
+python verify_all_platform_features.py
 
-# Run backend regex linter validation
-python brandpilot/backend/tests/test_linter.py
+# Run backend end-to-end integration test suite (17/17 tests)
+python brandpilot/backend/tests/test_integration_e2e.py
 
-# Run frontend TypeScript type checking and production build
+# Run frontend production build & TypeScript validation
 cd brandpilot/frontend
 npm run build
 ```
@@ -222,8 +222,20 @@ Production builds compile cleanly across all routes with **0 errors**.
 
 ---
 
+## ⚡ Vercel Deployment & Cloud Compatibility
+
+BrandPilot is fully configured for **instant, zero-friction deployment on Vercel**:
+
+* **Fullstack Serverless Execution**: Runs 100% standalone on Vercel Edge & Serverless Functions via Next.js App Router (`/api/[...path]`, `/api/audit`, `/api/extract`, `/api/health`).
+* **Root Monorepo `vercel.json`**: Pre-configured to build from repository root or subfolder without custom build scripts.
+* **Resilient Dual-Mode API**: Automatically falls back to high-performance local serverless handlers when no external backend is configured.
+
+👉 **Read the full [Vercel Deployment Guide](./VERCEL_DEPLOYMENT_GUIDE.md) for step-by-step instructions.**
+
+---
+
 ## 📄 License & Enterprise Support
 
 - **License**: MIT
 - **Architecture**: Cloud-Native & On-Premises Deployable
-- **Documentation**: [Full Brand Knowledge Base Specification](file:///c:/Users/Ruben%20John%20Reji/Desktop/MY%20projects/CODEATHON%20HACKATHON/BrandPilot_Enterprise_Brand_Knowledge_Base.md)
+- **Documentation**: [Full Brand Knowledge Base Specification](./BrandPilot_Enterprise_Brand_Knowledge_Base.md)
