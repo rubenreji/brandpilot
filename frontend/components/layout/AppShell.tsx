@@ -27,7 +27,18 @@ import {
   Check,
   RotateCcw,
   Layers,
-  Mic
+  Mic,
+  Radar,
+  CreditCard,
+  Boxes,
+  Scale,
+  FileText,
+  BookMarked,
+  Video,
+  Globe2,
+  Box,
+  Flame,
+  Crosshair
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -69,28 +80,41 @@ export function AppShell({ children }: AppShellProps) {
   const latestSubmissionId = submissions && submissions.length > 0 ? submissions[0].id : 'live';
 
   const navItems = [
-    { label: 'Dashboard', href: '/app/dashboard', icon: LayoutDashboard },
-    { label: 'Brand Knowledge Base', href: '/app/knowledge', icon: BookOpen },
-    { label: 'Content Auditing', href: '/app/audit', icon: FileCheck2 },
+    { label: 'Dashboard', desc: 'Overview & brand score', href: '/app/dashboard', icon: LayoutDashboard },
+    { label: 'Brand Sentinel 24/7', desc: 'Live crawler & site monitor', href: '/app/sentinel', icon: Radar, badge: 'Live' },
+    { label: 'Brand Knowledge Base', desc: 'Rules & verified facts', href: '/app/knowledge', icon: BookOpen },
+    { label: 'Content Auditing', desc: 'Check text, ads & copy', href: '/app/audit', icon: FileCheck2 },
     {
       label: 'Correction Studio',
+      desc: '1-click suggested fixes',
       href: `/app/corrections/${latestSubmissionId}`,
       icon: Sparkles,
       badge: 'Live'
     },
     {
       label: 'Approval Centre',
+      desc: 'Manager sign-off to publish',
       href: '/app/approvals',
       icon: ShieldCheck,
       badgeCount: pendingApprovalsCount > 0 ? pendingApprovalsCount : undefined
     },
-    { label: 'Revisions & History', href: '/app/history', icon: History },
-    { label: 'Governance Analytics', href: '/app/analytics', icon: BarChart3 },
-    { label: 'Visual Identity', href: '/app/visual', icon: Palette },
-    { label: 'In-Situ Studio (Figma/Web)', href: '/app/insitu', icon: Layers, badge: 'New' },
-    { label: 'Multimodal Audio/Video', href: '/app/multimodal', icon: Mic, badge: 'New' },
-    { label: 'Team & Roles', href: '/app/team', icon: Users },
-    { label: 'Settings', href: '/app/settings', icon: Settings }
+    { label: 'Revisions & History', desc: 'Past versions & audit log', href: '/app/history', icon: History },
+    { label: '3D Physical Packaging', desc: 'Spatial box & merch audit', href: '/app/packaging-3d', icon: Box, badge: 'New' },
+    { label: 'PR Crisis & Legal Shield', desc: 'Cease & desist dispatch', href: '/app/crisis', icon: Flame, badge: 'Live' },
+    { label: 'Ad Spy & Counter-Strike', desc: 'Exploit competitor claims', href: '/app/counterstrike', icon: Crosshair, badge: 'New' },
+    { label: 'Legal Risk & Fine Engine', desc: 'FTC & EU statutory liability', href: '/app/risk', icon: Scale, badge: 'New' },
+    { label: 'Executive Boardroom PDF', desc: 'Signed audit memos & reports', href: '/app/reports', icon: FileText, badge: 'New' },
+    { label: 'Living Brand Styleguide', desc: 'Design tokens, logos & voice', href: '/app/styleguide', icon: BookMarked, badge: 'New' },
+    { label: 'Video & Storyboard Studio', desc: 'Frame OCR & dwell compliance', href: '/app/video', icon: Video, badge: 'New' },
+    { label: 'Multi-Territory Matrix', desc: 'US, EU, UK & APAC regulations', href: '/app/jurisdiction', icon: Globe2, badge: 'New' },
+    { label: 'Governance Analytics', desc: 'Compliance charts & trends', href: '/app/analytics', icon: BarChart3 },
+    { label: 'Visual Brand Inspector', desc: 'Colors, logos & contrast', href: '/app/visual', icon: Palette },
+    { label: 'In-Situ Studio (Figma/Web)', desc: 'Test live in design tools', href: '/app/insitu', icon: Layers, badge: 'New' },
+    { label: 'Speech & Audio Studio', desc: 'Listen to scripts aloud', href: '/app/multimodal', icon: Mic, badge: 'New' },
+    { label: 'Extensions & Cloud DAM', desc: 'Chrome, Figma & cloud buckets', href: '/app/integrations', icon: Boxes, badge: 'New' },
+    { label: 'Billing & Subscriptions', desc: 'Stripe tiers & audit quotas', href: '/app/billing', icon: CreditCard },
+    { label: 'Team & Roles', desc: 'Manage access & members', href: '/app/team', icon: Users },
+    { label: 'Workspace Settings', desc: 'Brand setup & integrations', href: '/app/settings', icon: Settings }
   ];
 
   return (
@@ -105,16 +129,16 @@ export function AppShell({ children }: AppShellProps) {
           <span className="font-semibold text-emerald-400">BrandPilot Governance Engine</span>
           <span className="text-emerald-900 hidden sm:inline">|</span>
           <span className="text-zinc-400 hidden sm:inline">
-            Deterministic Rule Checking + Semantic Vector RAG + Human-in-the-Loop Sign-off
+            Automated Brand Rules + Smart AI Claim Checking + Real Human Sign-off
           </span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 hidden sm:flex">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00FF87] animate-pulse"></span>
-            <span className="font-semibold">Supabase DB: Persistent ({dbSyncStatus.toUpperCase()})</span>
+            <span className="font-semibold">Persistent Database ({dbSyncStatus.toUpperCase()})</span>
           </div>
           <span className="text-amber-400 font-medium hidden md:inline">
-            Strict Policy: AI cannot independently publish content
+            Safe by Design: AI suggests fixes, only humans approve and publish
           </span>
           <Link
             href="/"
@@ -182,11 +206,10 @@ export function AppShell({ children }: AppShellProps) {
                       switchWorkspace(b.workspace.id);
                       setWorkspaceMenuOpen(false);
                     }}
-                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer text-xs ${
-                      currentWorkspace.id === b.workspace.id
-                        ? 'bg-emerald-950/80 border border-emerald-500/50 text-white'
-                        : 'hover:bg-[#060B08] text-zinc-300'
-                    }`}
+                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer text-xs ${currentWorkspace.id === b.workspace.id
+                      ? 'bg-emerald-950/80 border border-emerald-500/50 text-white'
+                      : 'hover:bg-[#060B08] text-zinc-300'
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="text-base">{b.icon}</span>
@@ -224,11 +247,10 @@ export function AppShell({ children }: AppShellProps) {
                   key={acc.id}
                   type="button"
                   onClick={() => switchAccount(acc.id)}
-                  className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer text-xs ${
-                    isActive
-                      ? 'bg-emerald-500 text-black font-extrabold shadow-[0_0_12px_rgba(16,185,129,0.4)]'
-                      : 'text-zinc-400 hover:text-white hover:bg-emerald-950/50'
-                  }`}
+                  className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer text-xs ${isActive
+                    ? 'bg-emerald-500 text-black font-extrabold shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                    : 'text-zinc-400 hover:text-white hover:bg-emerald-950/50'
+                    }`}
                   title={`Switch active account to ${acc.label}`}
                 >
                   {acc.label}
@@ -293,9 +315,8 @@ export function AppShell({ children }: AppShellProps) {
                       <div
                         key={n.id}
                         onClick={() => markNotificationRead(n.id)}
-                        className={`p-3.5 text-xs cursor-pointer hover:bg-emerald-950/40 transition-colors ${
-                          !n.is_read ? 'bg-emerald-950/20 border-l-2 border-emerald-500' : ''
-                        }`}
+                        className={`p-3.5 text-xs cursor-pointer hover:bg-emerald-950/40 transition-colors ${!n.is_read ? 'bg-emerald-950/20 border-l-2 border-emerald-500' : ''
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span className={`font-semibold ${!n.is_read ? 'text-white' : 'text-zinc-300'}`}>
@@ -375,9 +396,8 @@ export function AppShell({ children }: AppShellProps) {
                           switchAccount(acc.id);
                           setUserMenuOpen(false);
                         }}
-                        className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
-                          isSelected ? 'bg-emerald-950/70 text-emerald-300 font-semibold border border-emerald-500/40' : 'hover:bg-emerald-950/30 text-zinc-300'
-                        }`}
+                        className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${isSelected ? 'bg-emerald-950/70 text-emerald-300 font-semibold border border-emerald-500/40' : 'hover:bg-emerald-950/30 text-zinc-300'
+                          }`}
                       >
                         <div>
                           <div className="text-xs font-semibold">{acc.name}</div>
@@ -450,9 +470,8 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Sidebar */}
         <aside
-          className={`w-64 bg-[#070D09] text-zinc-300 border-r border-emerald-950/80 flex flex-col justify-between shrink-0 transition-transform lg:translate-x-0 ${
-            mobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0' : 'hidden lg:flex'
-          }`}
+          className={`w-64 bg-[#070D09] text-zinc-300 border-r border-emerald-950/80 flex flex-col justify-between shrink-0 transition-transform lg:translate-x-0 ${mobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0' : 'hidden lg:flex'
+            }`}
         >
           {/* Top of Sidebar */}
           <div className="py-4">
@@ -474,28 +493,34 @@ export function AppShell({ children }: AppShellProps) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'bg-emerald-500 text-black shadow-md font-extrabold shadow-[0_0_14px_rgba(16,185,129,0.35)]'
-                        : 'text-zinc-300 hover:text-white hover:bg-emerald-950/40 hover:border-emerald-500/20'
-                    }`}
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group ${isActive
+                      ? 'bg-emerald-500 text-black shadow-md font-extrabold shadow-[0_0_14px_rgba(16,185,129,0.35)]'
+                      : 'text-zinc-300 hover:text-white hover:bg-emerald-950/40 hover:border-emerald-500/20'
+                      }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-black font-extrabold' : 'text-emerald-400/70'}`} />
-                      <span>{item.label}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-black font-extrabold' : 'text-emerald-400/80 group-hover:text-emerald-300'}`} />
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold">{item.label}</div>
+                        <div className={`text-[10px] truncate ${isActive ? 'text-black/80 font-medium' : 'text-zinc-500 group-hover:text-zinc-400'}`}>
+                          {item.desc}
+                        </div>
+                      </div>
                     </div>
 
-                    {item.badge && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">
-                        {item.badge}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                      {item.badge && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                          {item.badge}
+                        </span>
+                      )}
 
-                    {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-400 text-black shadow-[0_0_8px_rgba(245,158,11,0.5)]">
-                        {item.badgeCount}
-                      </span>
-                    )}
+                      {item.badgeCount !== undefined && item.badgeCount > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-400 text-black shadow-[0_0_8px_rgba(245,158,11,0.5)]">
+                          {item.badgeCount}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 );
               })}
@@ -505,16 +530,18 @@ export function AppShell({ children }: AppShellProps) {
           {/* Bottom of Sidebar: Brand Info & Status */}
           <div className="p-3 m-3 rounded-xl bg-[#040705] border border-emerald-900/40 text-xs">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold text-zinc-300">AuraCloud Guidelines</span>
+              <span className="text-[11px] font-semibold text-zinc-300 truncate max-w-[130px]">
+                {currentWorkspace.name}
+              </span>
               <span className="text-[9px] px-1.5 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-500/40 rounded font-mono">
-                v2.4 Active
+                Active Guidelines
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Enforcing 18 terminology rules, 8 approved corporate facts, and 4 brand voice dimensions.
+              Real-time brand compliance protecting claims, logos, color codes, and voice consistency.
             </p>
             <div className="mt-2.5 pt-2 border-t border-emerald-950 flex items-center justify-between text-[10px] text-zinc-500">
-              <span>Security: RLS & pgvector</span>
+              <span>Security: Enterprise RLS</span>
               <span className="text-emerald-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00FF87] shadow-[0_0_6px_#00FF87]"></span> Verified
               </span>

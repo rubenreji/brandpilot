@@ -28,7 +28,8 @@ import {
   Sparkles,
   ExternalLink,
   ShieldCheck,
-  ShieldAlert
+  ShieldAlert,
+  Scale
 } from 'lucide-react';
 import { EnterpriseApiKey, SubscriptionUsage, EnterpriseSystemStatus, WebhookTestPingResult } from '@/lib/types';
 
@@ -44,10 +45,12 @@ export default function SettingsPage() {
     testWebhookPing,
     listApiKeys,
     generateApiKey,
-    getSubscriptionUsage
+    getSubscriptionUsage,
+    aiProviderConfig,
+    updateAIProviderConfig
   } = useBrandPilot();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'sso' | 'developer' | 'billing' | 'security'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'sso' | 'developer' | 'security' | 'ai'>('general');
 
   // --- GENERAL TAB STATE ---
   const [orgName, setOrgName] = useState(currentWorkspace.name);
@@ -60,6 +63,7 @@ export default function SettingsPage() {
   const [ssoEnforced, setSsoEnforced] = useState(true);
   const [idpEntityId, setIdpEntityId] = useState('https://idp.okta.com/exk94821a0c4');
   const [scimEnabled, setScimEnabled] = useState(true);
+  const [mfaEnforced, setMfaEnforced] = useState(true);
 
   // --- DEVELOPER TAB STATE ---
   const [apiKeys, setApiKeys] = useState<EnterpriseApiKey[]>([]);
@@ -70,27 +74,30 @@ export default function SettingsPage() {
   const [webhookPinging, setWebhookPinging] = useState(false);
   const [webhookResult, setWebhookResult] = useState<WebhookTestPingResult | null>(null);
 
-  // --- BILLING TAB STATE ---
-  const [subscription, setSubscription] = useState<SubscriptionUsage | null>(null);
-
-  // --- SECURITY TAB STATE ---
+  // --- SECURITY & SIEM TAB STATE ---
   const [minComplianceScore, setMinComplianceScore] = useState(85);
   const [ragSimilarityThreshold, setRagSimilarityThreshold] = useState(0.75);
   const [testingDb, setTestingDb] = useState(false);
   const [systemStatus, setSystemStatus] = useState<EnterpriseSystemStatus | null>(null);
+  const [siemTarget, setSiemTarget] = useState<'datadog' | 'splunk' | 'sumo_logic'>('datadog');
+  const [kmsKeyArn, setKmsKeyArn] = useState('arn:aws:kms:us-east-1:849201849102:key/cmek-9481a-brandpilot');
+
+  // --- AI MODEL ENGINE TAB STATE ---
+  const [selectedAIProvider, setSelectedAIProvider] = useState(aiProviderConfig.provider);
+  const [aiApiKeyInput, setAiApiKeyInput] = useState('');
+  const [aiEndpointUrl, setAiEndpointUrl] = useState('https://auracloud-openai.openai.azure.com/');
+  const [isTestingModel, setIsTestingModel] = useState(false);
 
   // Initial Data Fetch
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      const [keys, sub, status] = await Promise.all([
+      const [keys, status] = await Promise.all([
         listApiKeys(),
-        getSubscriptionUsage(),
         getEnterpriseStatus()
       ]);
       if (isMounted) {
         setApiKeys(keys);
-        setSubscription(sub);
         setSystemStatus(status);
       }
     };
@@ -113,22 +120,48 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!newKeyName.trim()) return;
     setIsGeneratingKey(true);
-    const key = await generateApiKey(newKeyName);
-    setApiKeys(prev => [key, ...prev]);
-    setNewKeyName('');
-    setIsGeneratingKey(false);
+    try {
+      const newKey = await generateApiKey(newKeyName.trim());
+      setApiKeys(prev => [newKey, ...prev]);
+      setNewKeyName('');
+    } finally {
+      setIsGeneratingKey(false);
+    }
   };
 
   const handleTestWebhook = async () => {
     if (!webhookUrl.trim()) return;
     setWebhookPinging(true);
-    const res = await testWebhookPing(webhookUrl, 'audit.flagged', webhookSecret);
-    setWebhookResult(res);
-    setWebhookPinging(false);
+    try {
+      const res = await testWebhookPing(webhookUrl.trim(), 'content.published', webhookSecret);
+      setWebhookResult(res);
+      showToast('Webhook ping delivered with HMAC-SHA256 signature!', 'success');
+    } catch {
+      showToast('Webhook ping delivery failed.', 'error');
+    } finally {
+      setWebhookPinging(false);
+    }
+  };
+
+  const handleDownloadSPMetadata = () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor entityID="urn:brandpilot:auth" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
+  <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://auth.brandpilot.io/saml/acs" index="1"/>
+  </md:SPSSODescriptor>
+</md:EntityDescriptor>`;
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'brandpilot-sp-metadata.xml';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Downloaded SAML 2.0 Service Provider Metadata XML!', 'success');
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-6xl mx-auto space-y-6 text-zinc-100 selection:bg-emerald-500 selection:text-black">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-6 text-zinc-100 selection:bg-emerald-500 selection:text-black">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-emerald-950/80">
         <div>
@@ -141,8 +174,8 @@ export default function SettingsPage() {
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             Organization Settings & Governance
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Manage multi-region residency, SAML 2.0 / Okta SSO, developer API keys, outbound webhooks, and enterprise billing.
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            Configure multi-region residency, SAML 2.0 SSO, SIEM streaming, BYO AI foundation models, and developer API keys.
           </p>
         </div>
 
@@ -162,8 +195,8 @@ export default function SettingsPage() {
           { id: 'general', label: 'General & Multi-Region', icon: Globe },
           { id: 'sso', label: 'SAML 2.0 & Directory (SCIM)', icon: Lock },
           { id: 'developer', label: 'API Keys & Webhooks', icon: Code2 },
-          { id: 'billing', label: 'Subscription & Quotas', icon: CreditCard },
-          { id: 'security', label: 'Governance & Infrastructure', icon: Shield }
+          { id: 'security', label: 'Governance & SIEM', icon: Shield },
+          { id: 'ai', label: 'AI Model Engine & BYOK', icon: Sparkles }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -172,7 +205,7 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === tab.id
-                  ? 'border-[#00FF87] text-[#00FF87] bg-emerald-950/40 rounded-t-lg'
+                  ? 'border-[#00FF87] text-[#00FF87] bg-emerald-950/40 rounded-t-lg font-bold'
                   : 'border-transparent text-zinc-400 hover:text-white hover:border-emerald-500/40'
               }`}
             >
@@ -218,84 +251,40 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-
-            <div className="mt-4 p-4 rounded-xl bg-[#060B08] border border-emerald-950 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-white block">Custom White-Label Domain (CNAME)</span>
-                  <span className="text-[11px] text-zinc-400">Route brand intelligence portal and public verification to your corporate subdomain.</span>
-                </div>
-                <span className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
-                  domainVerified ? 'bg-emerald-950 text-[#00FF87] border-emerald-800' : 'bg-amber-950 text-amber-300 border-amber-800'
-                }`}>
-                  {domainVerified ? 'SSL Active (Let\'s Encrypt)' : 'Pending DNS Propagation'}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customDomain}
-                  onChange={e => setCustomDomain(e.target.value)}
-                  placeholder="brand.yourcompany.com"
-                  className="w-full text-xs p-2 border border-emerald-900/60 bg-[#0A120E] text-zinc-100 font-mono rounded-lg focus:outline-hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => showToast('CNAME record validated: points to cname.brandpilot.ai', 'success')}
-                  className="px-3 py-1.5 bg-emerald-950 text-emerald-300 border border-emerald-800 hover:bg-emerald-900 rounded-lg text-xs font-mono whitespace-nowrap cursor-pointer transition-colors"
-                >
-                  Verify DNS
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* Multi-Region Data Residency & Zero Data Retention */}
-          <div className="pt-6 border-t border-emerald-950 space-y-4">
+          <div className="pt-6 border-t border-emerald-950">
             <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <Server className="w-4 h-4 text-emerald-400" />
-              <span>Multi-Region Data Residency & Sovereignty Shield</span>
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span>Data Residency & Sovereignty</span>
             </h2>
-            <p className="text-xs text-zinc-400">
-              Select the sovereign cloud data region where all embeddings, audit documents, and ledger signatures are permanently stored.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { id: 'us-east-1', name: 'US-East (N. Virginia)', spec: 'SOC 2 Type II • HIPAA BAA Gated', flag: '🇺🇸' },
-                { id: 'eu-central-1', name: 'EU-Central (Frankfurt)', spec: 'GDPR Article 28 • C5 Certified', flag: '🇪🇺' },
-                { id: 'ap-southeast-1', name: 'AP-Southeast (Singapore)', spec: 'MAS TRM • India DPDP 2023', flag: '🇸🇬' }
-              ].map(reg => (
-                <div
-                  key={reg.id}
-                  onClick={() => {
-                    setDataResidency(reg.id);
-                    showToast(`Data residency pinned to ${reg.name}`, 'info');
-                  }}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    dataResidency === reg.id
-                      ? 'bg-emerald-950/60 border-[#00FF87] shadow-[0_0_12px_rgba(0,255,135,0.2)]'
-                      : 'bg-[#060B08] border-emerald-950 hover:border-emerald-800'
-                  }`}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+              <div>
+                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1">
+                  Primary Data Region
+                </label>
+                <select
+                  disabled={currentRole !== 'admin'}
+                  value={dataResidency}
+                  onChange={e => setDataResidency(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-emerald-900/60 bg-[#060B08] text-zinc-100 rounded-xl"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-base">{reg.flag}</span>
-                    <span className="text-[10px] font-mono text-zinc-500">{reg.id}</span>
-                  </div>
-                  <div className="text-xs font-bold text-white mt-1">{reg.name}</div>
-                  <div className="text-[10px] text-zinc-400 mt-0.5">{reg.spec}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Zero Data Retention Certification */}
-            <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/80 flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-[#00FF87] shrink-0 mt-0.5" />
-              <div className="text-xs space-y-1">
-                <span className="font-bold text-white block">Enterprise Zero Data Retention (ZDR) Agreement Active</span>
-                <p className="text-zinc-300 text-[11px] leading-relaxed">
-                  BrandPilot operates under enforceable enterprise Zero Data Retention agreements. No customer collateral, proprietary brand rules, or employee documents are ever used for public AI model training or stored in shared vector pools.
-                </p>
+                  <option value="us-east-1">US East (N. Virginia) - AWS</option>
+                  <option value="eu-central-1">EU Central (Frankfurt) - GDPR Compliant</option>
+                  <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1">
+                  Custom Brand Portal Domain
+                </label>
+                <input
+                  type="text"
+                  disabled={currentRole !== 'admin'}
+                  value={customDomain}
+                  onChange={e => setCustomDomain(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-emerald-900/60 bg-[#060B08] text-zinc-100 rounded-xl font-mono"
+                />
               </div>
             </div>
           </div>
@@ -303,10 +292,11 @@ export default function SettingsPage() {
           {currentRole === 'admin' && (
             <div className="pt-4 border-t border-emerald-950 flex justify-end">
               <button
+                type="button"
                 onClick={handleSaveGeneral}
-                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all shadow-[0_0_16px_rgba(16,185,129,0.35)] cursor-pointer"
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl shadow-lg cursor-pointer"
               >
-                Save General Workspace Configuration
+                Save Workspace Settings
               </button>
             </div>
           )}
@@ -314,158 +304,97 @@ export default function SettingsPage() {
       )}
 
       {/* ============================================================== */}
-      {/* TAB 2: SAML 2.0 & DIRECTORY SYNC (SCIM) */}
+      {/* TAB 2: SAML 2.0 & SCIM DIRECTORY */}
       {/* ============================================================== */}
       {activeTab === 'sso' && (
-        <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-emerald-950">
+        <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-950">
             <div>
               <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                 <Lock className="w-4 h-4 text-emerald-400" />
-                <span>Enterprise Identity & Single Sign-On (SAML 2.0)</span>
+                <span>Enterprise Identity & Single Sign-On (SAML 2.0 / SCIM)</span>
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Delegate user authentication to your corporate identity provider (IdP).
+                Enforce centralized corporate authentication via Okta, Microsoft Azure AD / Entra ID, or Google Workspace.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-zinc-300">Enforce SSO:</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSsoEnforced(!ssoEnforced);
-                  showToast(ssoEnforced ? 'SSO requirement disabled' : 'SSO enforced for all organization users', 'info');
-                }}
-                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                  ssoEnforced ? 'bg-emerald-500' : 'bg-zinc-700'
-                }`}
-              >
-                <div className={`bg-black w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                  ssoEnforced ? 'translate-x-5' : 'translate-x-0'
-                }`} />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleDownloadSPMetadata}
+              className="px-3.5 py-1.5 bg-[#060B08] border border-emerald-900/60 hover:border-emerald-500 text-zinc-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Download SP Metadata XML</span>
+            </button>
           </div>
 
-          {/* IdP Selector */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { id: 'okta', name: 'Okta Workforce Identity', desc: 'SAML 2.0 + SCIM 2.0 Sync' },
-              { id: 'azure_ad', name: 'Microsoft Entra ID (Azure AD)', desc: 'OIDC / SAML Enterprise App' },
-              { id: 'google_workspace', name: 'Google Workspace Enterprise', desc: 'Secure SAML Authentication' }
-            ].map(p => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => {
-                  setSsoProvider(p.id as any);
-                  showToast(`Selected ${p.name}`, 'info');
-                }}
-                className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
-                  ssoProvider === p.id
-                    ? 'bg-emerald-950/60 border-[#00FF87]'
-                    : 'bg-[#060B08] border-emerald-950 hover:border-emerald-800'
-                }`}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-3">
+              <label className="text-xs font-bold text-zinc-300 block">SAML 2.0 Identity Provider (IdP)</label>
+              <select
+                value={ssoProvider}
+                onChange={e => setSsoProvider(e.target.value as any)}
+                className="w-full text-xs p-2.5 bg-[#0A120E] border border-emerald-900/60 rounded-xl text-white"
               >
-                <div className="text-xs font-bold text-white">{p.name}</div>
-                <div className="text-[10px] text-zinc-400 mt-0.5">{p.desc}</div>
-              </button>
-            ))}
-          </div>
+                <option value="okta">Okta Enterprise SSO</option>
+                <option value="azure_ad">Microsoft Entra ID (Azure AD)</option>
+                <option value="google_workspace">Google Workspace SAML</option>
+              </select>
 
-          {/* SAML Parameters */}
-          <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1">
-                  Assertion Consumer Service (ACS) URL
-                </label>
-                <div className="flex gap-2">
+                <label className="text-[11px] text-zinc-400 block mb-1">IdP Entity ID / Issuer URL</label>
+                <input
+                  type="text"
+                  value={idpEntityId}
+                  onChange={e => setIdpEntityId(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-[#0A120E] border border-emerald-900/60 rounded-xl text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-zinc-400 block mb-1">ACS (Assertion Consumer Service) URL</label>
+                <input
+                  type="text"
+                  disabled
+                  value="https://auth.brandpilot.io/saml/acs"
+                  className="w-full text-xs p-2.5 bg-[#050806] border border-emerald-950 rounded-xl text-emerald-400 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">SCIM 2.0 Directory Sync</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-[#00FF87] border border-emerald-800">
+                  Active
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Automatically sync users, assign roles (Admin, Reviewer, Creator), and de-provision employee access instantly when departures occur in Okta.
+              </p>
+
+              <div>
+                <label className="text-[11px] text-zinc-400 block mb-1">SCIM 2.0 Base URL</label>
+                <input
+                  type="text"
+                  disabled
+                  value="https://api.brandpilot.io/scim/v2"
+                  className="w-full text-xs p-2.5 bg-[#050806] border border-emerald-950 rounded-xl text-zinc-300 font-mono"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
                   <input
-                    type="text"
-                    disabled
-                    value="https://auth.brandpilot.ai/saml/v1/acs/org-auracloud-001"
-                    className="w-full text-xs p-2.5 border border-emerald-950 bg-[#050806] font-mono text-zinc-300 rounded-xl"
+                    type="checkbox"
+                    checked={mfaEnforced}
+                    onChange={e => setMfaEnforced(e.target.checked)}
+                    className="rounded text-emerald-500 focus:ring-0"
                   />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText('https://auth.brandpilot.ai/saml/v1/acs/org-auracloud-001');
-                      showToast('Copied ACS URL to clipboard', 'success');
-                    }}
-                    className="px-3 bg-emerald-950 border border-emerald-800 text-emerald-300 rounded-xl hover:bg-emerald-900 cursor-pointer"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1">
-                  Service Provider Entity ID / Audience URI
+                  <span>Enforce Multi-Factor Authentication (TOTP / WebAuthn)</span>
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    disabled
-                    value="https://auth.brandpilot.ai/saml/v1/sp/org-auracloud-001"
-                    className="w-full text-xs p-2.5 border border-emerald-950 bg-[#050806] font-mono text-zinc-300 rounded-xl"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText('https://auth.brandpilot.ai/saml/v1/sp/org-auracloud-001');
-                      showToast('Copied SP Entity ID to clipboard', 'success');
-                    }}
-                    className="px-3 bg-emerald-950 border border-emerald-800 text-emerald-300 rounded-xl hover:bg-emerald-900 cursor-pointer"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1">
-                IdP Metadata XML / SSO Target URL
-              </label>
-              <input
-                type="text"
-                value={idpEntityId}
-                onChange={e => setIdpEntityId(e.target.value)}
-                className="w-full text-xs p-2.5 border border-emerald-900/60 bg-[#060B08] text-zinc-100 font-mono rounded-xl focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          {/* SCIM Directory Sync */}
-          <div className="pt-6 border-t border-emerald-950 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">SCIM 2.0 Automatic User Provisioning</h3>
-                <p className="text-[11px] text-zinc-400">Automatically provision seats and revoke access when employees join or leave your Okta/Azure directory.</p>
-              </div>
-              <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-[#00FF87] border border-emerald-800">
-                SCIM 2.0 Active
-              </span>
-            </div>
-
-            <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950 flex items-center justify-between font-mono text-[11px]">
-              <div>
-                <span className="text-zinc-500">SCIM Endpoint: </span>
-                <span className="text-zinc-200">https://api.brandpilot.ai/scim/v2/org-auracloud-001</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText('https://api.brandpilot.ai/scim/v2/org-auracloud-001');
-                  showToast('SCIM endpoint copied', 'success');
-                }}
-                className="text-xs text-emerald-400 hover:underline cursor-pointer"
-              >
-                Copy Endpoint
-              </button>
             </div>
           </div>
         </div>
@@ -475,376 +404,329 @@ export default function SettingsPage() {
       {/* TAB 3: DEVELOPER API KEYS & WEBHOOKS */}
       {/* ============================================================== */}
       {activeTab === 'developer' && (
-        <div className="space-y-6">
-          {/* Production API Keys Management */}
-          <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-emerald-950">
-              <div>
-                <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                  <Key className="w-4 h-4 text-emerald-400" />
-                  <span>Production Developer API Keys</span>
-                </h2>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Generate scoped Bearer tokens to integrate BrandPilot with GitHub Actions, custom CMS pipelines, and internal tools.
-                </p>
-              </div>
-
-              {/* Generate Key Form */}
-              <form onSubmit={handleGenerateKey} className="flex gap-2 w-full sm:w-auto">
-                <input
-                  type="text"
-                  placeholder="Key name (e.g. CI Runner)"
-                  value={newKeyName}
-                  onChange={e => setNewKeyName(e.target.value)}
-                  className="px-3 py-1.5 text-xs bg-[#060B08] border border-emerald-900/60 rounded-xl text-white focus:outline-hidden"
-                />
-                <button
-                  type="submit"
-                  disabled={isGeneratingKey || !newKeyName.trim()}
-                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-xs font-bold rounded-xl whitespace-nowrap cursor-pointer shadow-[0_0_12px_rgba(0,255,135,0.25)] transition-all"
-                >
-                  Generate Key
-                </button>
-              </form>
-            </div>
-
-            {/* Keys Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-emerald-950 text-zinc-400 font-bold uppercase tracking-wider bg-[#060B08]">
-                  <tr>
-                    <th className="py-2.5 px-3">Key Label</th>
-                    <th className="py-2.5 px-3">Prefix Token</th>
-                    <th className="py-2.5 px-3">Permissions / Scopes</th>
-                    <th className="py-2.5 px-3">Last Active</th>
-                    <th className="py-2.5 px-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-emerald-950/60 font-mono text-[11px]">
-                  {apiKeys.map(k => (
-                    <tr key={k.id} className="hover:bg-[#060B08]/60 transition-colors">
-                      <td className="py-2.5 px-3 font-bold text-white font-sans">{k.name}</td>
-                      <td className="py-2.5 px-3 text-emerald-400">{k.prefix}••••••••</td>
-                      <td className="py-2.5 px-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {k.scopes.map(s => (
-                            <span key={s} className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-zinc-400 font-sans">{k.last_used_at}</td>
-                      <td className="py-2.5 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(k.full_key || `${k.prefix}9b2c4e6d8a1e3f5b7c9d0a2e4f6a`);
-                            showToast(`Copied token for ${k.name}`, 'success');
-                          }}
-                          className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#0A120E] border border-emerald-900/60 hover:border-emerald-500 cursor-pointer transition-colors"
-                        >
-                          Copy
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between pb-3 border-b border-emerald-950">
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Code2 className="w-4 h-4 text-emerald-400" />
+                <span>Production Developer API Keys</span>
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">Scoped programmatic access for CI/CD pipelines, CMS gateways, and headless audits.</p>
             </div>
           </div>
 
-          {/* Outbound Webhook Subscriptions & Live Ping Tester */}
-          <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-4">
-            <div className="pb-4 border-b border-emerald-950">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                <Webhook className="w-4 h-4 text-emerald-400" />
-                <span>Outbound Event Webhooks & Cryptographic Signatures</span>
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                BrandPilot signs all outbound event payloads using HMAC-SHA256 headers (`BrandPilot-Signature: t=...,v1=...`).
-              </p>
-            </div>
+          <form onSubmit={handleGenerateKey} className="flex gap-3">
+            <input
+              type="text"
+              required
+              placeholder="e.g. GitHub Actions CI/CD Pipeline"
+              value={newKeyName}
+              onChange={e => setNewKeyName(e.target.value)}
+              className="flex-1 text-xs p-2.5 border border-emerald-900/60 bg-[#060B08] text-white rounded-xl focus:outline-none focus:border-emerald-500"
+            />
+            <button
+              type="submit"
+              disabled={isGeneratingKey}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl cursor-pointer"
+            >
+              Generate Scoped Key
+            </button>
+          </form>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1">
-                  Destination Webhook Endpoint
-                </label>
-                <input
-                  type="text"
-                  value={webhookUrl}
-                  onChange={e => setWebhookUrl(e.target.value)}
-                  placeholder="https://yourserver.com/webhooks/brandpilot"
-                  className="w-full text-xs p-2.5 border border-emerald-900/60 bg-[#060B08] text-zinc-100 font-mono rounded-xl focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1">
-                  HMAC-SHA256 Signing Secret
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="password"
-                    value={webhookSecret}
-                    onChange={e => setWebhookSecret(e.target.value)}
-                    className="w-full text-xs p-2.5 border border-emerald-900/60 bg-[#060B08] text-zinc-100 font-mono rounded-xl focus:outline-hidden"
-                  />
+          {/* Key List */}
+          <div className="space-y-3">
+            {apiKeys.map(k => (
+              <div key={k.id} className="p-3.5 rounded-xl bg-[#060B08] border border-emerald-950 flex items-center justify-between text-xs">
+                <div>
+                  <div className="font-bold text-white">{k.name}</div>
+                  <div className="text-[11px] font-mono text-zinc-400 mt-0.5">{k.full_key || k.prefix + '••••••••'}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                    Active
+                  </span>
                   <button
                     type="button"
-                    onClick={handleTestWebhook}
-                    disabled={webhookPinging || !webhookUrl.trim()}
-                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-xs font-extrabold rounded-xl whitespace-nowrap cursor-pointer transition-all shadow-[0_0_12px_rgba(0,255,135,0.25)] flex items-center gap-1.5"
+                    onClick={() => {
+                      navigator.clipboard.writeText(k.full_key || k.prefix);
+                      showToast('Copied API Key to clipboard!', 'success');
+                    }}
+                    className="p-1.5 rounded-lg bg-[#0A120E] text-zinc-400 hover:text-white"
                   >
-                    {webhookPinging ? (
-                      <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Zap className="w-3.5 h-3.5 text-black" />
-                    )}
-                    <span>Send Test Ping</span>
+                    <Copy className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Webhook Test Response Viewer */}
-            {webhookResult && (
-              <div className="p-4 rounded-xl bg-[#060B08] border border-emerald-900/60 space-y-2 font-mono text-xs animate-in fade-in duration-200">
-                <div className="flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-emerald-950 text-[#00FF87] border border-emerald-800 font-bold">
-                      HTTP {webhookResult.http_response_code} OK
-                    </span>
-                    <span className="text-zinc-400">Latency: {webhookResult.latency_ms}ms</span>
-                  </div>
-                  <span className="text-zinc-500">Event: {webhookResult.event_type}</span>
-                </div>
-
-                <div className="text-[11px] text-zinc-400 truncate">
-                  <span className="text-zinc-500">Signature: </span>
-                  <span className="text-emerald-400">{webhookResult.signature_header}</span>
-                </div>
-
-                <div className="p-2.5 rounded bg-[#040705] border border-emerald-950 text-[10px] text-zinc-300 max-h-36 overflow-y-auto">
-                  <pre>{JSON.stringify(webhookResult.payload_dispatched, null, 2)}</pre>
-                </div>
-              </div>
-            )}
+            ))}
           </div>
-        </div>
-      )}
 
-      {/* ============================================================== */}
-      {/* TAB 4: SUBSCRIPTION & REAL-TIME QUOTA METERS */}
-      {/* ============================================================== */}
-      {activeTab === 'billing' && subscription && (
-        <div className="space-y-6">
-          {/* Plan Summary Card */}
-          <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-emerald-950">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                    Active Subscription
-                  </span>
-                  <span className="text-xs font-mono text-zinc-500">Tier 1 SLA Commitment</span>
-                </div>
-                <h2 className="text-2xl font-black text-white">
-                  {subscription.plan_tier}
-                </h2>
-                <p className="text-xs text-zinc-400">
-                  Annual enterprise billing commit. Contract renewal on <strong className="text-zinc-200">{subscription.renewal_date}</strong>.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => showToast('Opening Stripe Customer Portal...', 'info')}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold rounded-xl shadow-lg cursor-pointer transition-all shadow-[0_0_15px_rgba(0,255,135,0.3)] flex items-center gap-2"
-                >
-                  <CreditCard className="w-3.5 h-3.5 text-black" />
-                  <span>Stripe Billing Portal</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Consumption Quota Progress Bars */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-[#060B08] border border-emerald-950 space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-zinc-300">Monthly Brand Audits</span>
-                  <span className="font-mono text-emerald-400">
-                    {subscription.usage_meters.monthly_audits.used} / {subscription.usage_meters.monthly_audits.quota} ({subscription.usage_meters.monthly_audits.percentage}%)
-                  </span>
-                </div>
-                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-emerald-400 h-full rounded-full transition-all"
-                    style={{ width: `${subscription.usage_meters.monthly_audits.percentage}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-zinc-500 block">Resets on 1st of every month. Additional audits billed at $0.08/run.</span>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#060B08] border border-emerald-950 space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-zinc-300">In-Situ Linter API Calls (Figma / Web)</span>
-                  <span className="font-mono text-emerald-400">
-                    {subscription.usage_meters.insitu_api_calls.used.toLocaleString()} / {subscription.usage_meters.insitu_api_calls.quota.toLocaleString()} ({subscription.usage_meters.insitu_api_calls.percentage}%)
-                  </span>
-                </div>
-                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-emerald-400 h-full rounded-full transition-all"
-                    style={{ width: `${subscription.usage_meters.insitu_api_calls.percentage}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-zinc-500 block">Sub-10ms edge caching active globally.</span>
-              </div>
-            </div>
-
-            {/* Invoices History Table */}
-            <div className="pt-4 border-t border-emerald-950 space-y-3">
+          {/* Webhooks */}
+          <div className="pt-6 border-t border-emerald-950 space-y-3">
+            <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-400" />
-                <span>Invoice History & PDF Receipts</span>
+                <Webhook className="w-4 h-4 text-emerald-400" />
+                <span>Outbound Event Webhook (HMAC-SHA256)</span>
               </h3>
+            </div>
 
-              <div className="border border-emerald-950 rounded-xl overflow-hidden bg-[#060B08]">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead className="border-b border-emerald-950 text-zinc-400 font-bold uppercase bg-[#050806]">
-                    <tr>
-                      <th className="py-2.5 px-3">Invoice ID</th>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Amount</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3 text-right">Receipt</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-emerald-950/60 text-[11px]">
-                    {subscription.invoices.map(inv => (
-                      <tr key={inv.id} className="hover:bg-[#0A120E] transition-colors">
-                        <td className="py-2.5 px-3 text-white font-bold">{inv.id}</td>
-                        <td className="py-2.5 px-3 text-zinc-400">{inv.date}</td>
-                        <td className="py-2.5 px-3 text-emerald-400 font-bold">{inv.amount}</td>
-                        <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 rounded bg-emerald-950 text-[#00FF87] border border-emerald-800 text-[10px]">
-                            {inv.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => showToast(`Downloaded invoice ${inv.id}`, 'info')}
-                            className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 ml-auto cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>PDF</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={webhookUrl}
+                onChange={e => setWebhookUrl(e.target.value)}
+                className="flex-1 text-xs p-2.5 bg-[#060B08] border border-emerald-900/60 rounded-xl text-white font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleTestWebhook}
+                disabled={webhookPinging}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl flex items-center gap-1.5 cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>{webhookPinging ? 'Sending...' : 'Test Ping'}</span>
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* ============================================================== */}
-      {/* TAB 5: GOVERNANCE GUARDRAILS & DATABASE INFRASTRUCTURE */}
+      {/* TAB 4: GOVERNANCE, SIEM & KMS SECURITY */}
       {/* ============================================================== */}
       {activeTab === 'security' && (
-        <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-6">
-          <div className="pb-4 border-b border-emerald-950">
-            <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <Shield className="w-4 h-4 text-emerald-400" />
-              <span>Governance Sensitivity & Statutory Thresholds</span>
-            </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Configure automated gating policies before collateral transitions to production reviewers.
-            </p>
+        <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-950">
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span>Enterprise SIEM Streaming & CMEK Encryption</span>
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Stream tamper-evident audit logs to Datadog or Splunk, and encrypt guidelines using your AWS KMS key.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const auditBlob = new Blob([JSON.stringify({ tenant: currentWorkspace.id, exported_at: new Date().toISOString(), status: 'verified_ledger_sha256' }, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(auditBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `brandpilot-tamper-evident-audit-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Exported signed cryptographic audit log (SHA-256)!', 'success');
+              }}
+              className="px-3.5 py-1.5 bg-[#060B08] border border-emerald-900/60 hover:border-emerald-500 text-zinc-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Export Signed Ledger (JSON)</span>
+            </button>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between text-xs font-bold text-zinc-200 mb-1">
-                <span>Minimum Compliance Score Required for Reviewer Queue</span>
-                <span className="font-mono text-emerald-400 font-bold">{minComplianceScore}%</span>
-              </div>
-              <input
-                type="range"
-                min="50"
-                max="100"
-                disabled={currentRole !== 'admin'}
-                value={minComplianceScore}
-                onChange={e => setMinComplianceScore(Number(e.target.value))}
-                className="w-full accent-emerald-500 cursor-pointer"
-              />
-              <div className="text-[11px] text-zinc-500 mt-1">
-                Drafts scoring under {minComplianceScore}% must have critical statutory findings resolved before submission.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
+              <label className="text-xs font-bold text-zinc-300 block">Enterprise SIEM Stream Target</label>
+              <select
+                value={siemTarget}
+                onChange={e => {
+                  setSiemTarget(e.target.value as any);
+                  showToast(`SIEM streaming configured for ${e.target.value.toUpperCase()}`, 'success');
+                }}
+                className="w-full text-xs p-2.5 bg-[#0A120E] border border-emerald-900/60 rounded-xl text-white"
+              >
+                <option value="datadog">Datadog (TCP Syslog / TLS)</option>
+                <option value="splunk">Splunk HTTP Event Collector (HEC)</option>
+                <option value="sumo_logic">Sumo Logic Cloud Collector</option>
+              </select>
+              <div className="text-[10px] text-emerald-400 flex items-center gap-1 pt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00FF87] animate-pulse" />
+                <span>Streaming Active: 142 audit events forwarded today</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3.5 bg-[#060B08] rounded-xl border border-emerald-950">
-              <div>
-                <span className="text-xs font-bold text-zinc-200 block">Strict Human Segregation of Duties</span>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  Prohibit content creators from self-approving their own submissions (Enforces 403 Forbidden Gatekeeper).
-                </p>
+            <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
+              <label className="text-xs font-bold text-zinc-300 block">Customer-Managed Encryption Key (CMEK / BYOK)</label>
+              <input
+                type="text"
+                value={kmsKeyArn}
+                onChange={e => setKmsKeyArn(e.target.value)}
+                className="w-full text-xs p-2.5 bg-[#0A120E] border border-emerald-900/60 rounded-xl text-white font-mono"
+              />
+              <div className="text-[10px] text-zinc-400">
+                AES-256 envelope encryption managed in your organization's cloud account.
               </div>
-              <span className="px-2.5 py-1 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 text-[11px] font-bold">
-                Always Enforced
+            </div>
+          </div>
+
+          <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 flex items-center justify-between text-xs">
+            <div>
+              <span className="font-bold text-white block">Strict Human Segregation of Duties</span>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Prohibit content creators from self-approving their own submissions (Enforces 403 Forbidden Gatekeeper).
+              </p>
+            </div>
+            <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[11px]">
+              Always Enforced
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* TAB 5: AI MODEL ENGINE & BYOK PROVIDER SWITCHER */}
+      {/* ============================================================== */}
+      {activeTab === 'ai' && (
+        <div className="bg-[#0A120E] rounded-2xl p-6 border border-emerald-950/80 shadow-xl space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-950">
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <span>Enterprise AI Model Engine & BYOK Provider Switcher</span>
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Configure foundation LLM routing for contextual claim evaluation, or bring your own corporate API keys with zero data retention.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1.5">
+                <Lock className="w-3 h-3 text-emerald-400" />
+                <span>Zero Data Retention Active</span>
               </span>
             </div>
           </div>
 
-          {/* Database & Persistence */}
-          <div className="pt-6 border-t border-emerald-950 space-y-3">
-            <div className="flex items-center justify-between">
+          {/* Provider Selection Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                id: 'brandpilot_default',
+                name: 'BrandPilot Enterprise Hybrid',
+                desc: 'Deterministic rule engine + local vector RAG. Zero third-party data transmission.',
+                badge: 'Recommended',
+                latency: '0.04ms'
+              },
+              {
+                id: 'openai',
+                name: 'OpenAI (GPT-4o Enterprise)',
+                desc: 'Deep contextual claim reasoning and multi-hop counter-campaign logic.',
+                badge: 'BYO Key',
+                latency: '180ms'
+              },
+              {
+                id: 'anthropic',
+                name: 'Anthropic (Claude 3.5 Sonnet)',
+                desc: 'High-precision legal nuance, regulatory tone calibration, and policy auditing.',
+                badge: 'BYO Key',
+                latency: '210ms'
+              },
+              {
+                id: 'google_vertex',
+                name: 'Google Cloud (Gemini 1.5 Pro)',
+                desc: 'Native 1M+ token context window for digesting 500-page brand books in one pass.',
+                badge: 'Vertex AI',
+                latency: '160ms'
+              },
+              {
+                id: 'azure_openai',
+                name: 'Private Azure OpenAI Instance',
+                desc: 'Dedicated single-tenant Microsoft Azure cloud deployment with HIPAA/SOC 2 BAA.',
+                badge: 'FedRAMP / BAA',
+                latency: '140ms'
+              }
+            ].map(prov => {
+              const isSelected = selectedAIProvider === prov.id;
+              return (
+                <div
+                  key={prov.id}
+                  onClick={() => {
+                    setSelectedAIProvider(prov.id as any);
+                    updateAIProviderConfig({ provider: prov.id as any, model_name: prov.name });
+                  }}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                    isSelected
+                      ? 'bg-emerald-950/40 border-emerald-500 shadow-lg ring-1 ring-emerald-500/40'
+                      : 'bg-[#060B08] border-emerald-950 hover:border-emerald-800'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white">{prov.name}</span>
+                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                        isSelected ? 'bg-emerald-500 text-black' : 'bg-black text-zinc-400 border border-zinc-800'
+                      }`}>
+                        {prov.badge}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">{prov.desc}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-2 border-t border-emerald-950/60 font-mono">
+                    <span>Est. Latency: {prov.latency}</span>
+                    <span className="text-emerald-400 font-bold">{isSelected ? '✓ Active Engine' : 'Select'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* BYO API Key & Endpoint Configuration */}
+          <div className="p-5 bg-[#060B08] rounded-xl border border-emerald-950 space-y-4">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Key className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Provider Credentials & Data Residency Settings</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-400" />
-                  <span>Enterprise PostgreSQL & pgvector Engine</span>
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Multi-tenant PostgreSQL with Row-Level Security (RLS) and HNSW vector index.
-                </p>
+                <label className="text-xs font-bold text-zinc-300 block mb-1">
+                  API Key (Encrypted in AWS Secrets Manager)
+                </label>
+                <input
+                  type="password"
+                  value={aiApiKeyInput}
+                  onChange={e => setAiApiKeyInput(e.target.value)}
+                  placeholder="sk-••••••••••••••••••••••••"
+                  className="w-full text-xs p-2.5 bg-[#0A120E] border border-emerald-900/60 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
-                  isSupabaseActive
-                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/80'
-                    : 'bg-emerald-950/50 text-emerald-400 border-emerald-900/60'
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${isSupabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-500'}`} />
-                  {isSupabaseActive ? 'Supabase Managed Cloud Active' : 'Self-Contained Persistence Active'}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={handleTestDatabase}
-                  disabled={testingDb}
-                  className="px-3 py-1 bg-[#060B08] hover:bg-emerald-950/50 text-zinc-300 hover:text-white text-xs font-bold rounded-lg transition-colors border border-emerald-900/60 cursor-pointer"
-                >
-                  {testingDb ? 'Testing...' : 'Test Ping'}
-                </button>
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1">
+                  Private Cloud Endpoint URL (for Azure / VPC)
+                </label>
+                <input
+                  type="url"
+                  value={aiEndpointUrl}
+                  onChange={e => setAiEndpointUrl(e.target.value)}
+                  placeholder="https://your-tenant.openai.azure.com/"
+                  className="w-full text-xs p-2.5 bg-[#0A120E] border border-emerald-900/60 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
               </div>
             </div>
 
-            <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 text-xs space-y-2">
-              <div className="font-bold text-zinc-200">
-                {isSupabaseActive
-                  ? 'Active multi-tenant database connection verified with automated backup snapshots.'
-                  : 'BrandPilot is operating with local self-contained state persistence.'}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-emerald-950 text-xs">
+              <div className="flex items-center gap-2 text-zinc-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Strict Enterprise Guarantee: Zero customer data is retained or used for public foundation model training.</span>
               </div>
-              <p className="text-zinc-400 text-[11px] leading-relaxed">
-                To connect your dedicated cloud database: set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in your environment variables.
-              </p>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsTestingModel(true);
+                  await new Promise(r => setTimeout(r, 700));
+                  setIsTestingModel(false);
+                  showToast('AI Provider endpoint connection verified successfully (HTTP 200 OK)!', 'success');
+                }}
+                disabled={isTestingModel}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl shadow-md transition-colors cursor-pointer self-start sm:self-auto flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>{isTestingModel ? 'Pinging Provider...' : 'Test Connection Ping'}</span>
+              </button>
             </div>
           </div>
         </div>

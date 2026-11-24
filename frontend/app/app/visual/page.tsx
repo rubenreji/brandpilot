@@ -252,16 +252,16 @@ export default function VisualIdentityPage() {
             <Palette className="w-3.5 h-3.5 text-emerald-400" />
             <span>{currentWorkspace.name}</span>
             <span>•</span>
-            <span>Autonomous Visual Brand Governance</span>
+            <span>Visual Design & Marketing Graphics Checker</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
             <span>Visual Brand Compliance & Design Inspection</span>
             <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
-              Computer Vision v2.4
+              Visual Scanner
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Automated multi-vector inspection for digital marketing collateral, advertisements, logos, embedded copy, and WCAG accessibility standards.
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-2xl">
+            Automatically check your ads, banners, and social posts. Catches off-brand colors, distorted or crowded logos, and hard-to-read text before publishing.
           </p>
         </div>
 
@@ -289,7 +289,7 @@ export default function VisualIdentityPage() {
             }`}
           >
             <Palette className="w-3.5 h-3.5" />
-            <span>Color Tokens</span>
+            <span>Brand Colors</span>
           </button>
           <button
             type="button"
@@ -301,7 +301,7 @@ export default function VisualIdentityPage() {
             }`}
           >
             <Maximize2 className="w-3.5 h-3.5" />
-            <span>Logo Clearance</span>
+            <span>Logo Spacing</span>
           </button>
           <button
             type="button"
@@ -313,8 +313,45 @@ export default function VisualIdentityPage() {
             }`}
           >
             <Type className="w-3.5 h-3.5" />
-            <span>Typography</span>
+            <span>Font Sizing</span>
           </button>
+        </div>
+      </div>
+
+      {/* Beginner's 3-Step Guide (Easy for Anyone) */}
+      <div className="bg-[#0A120E] rounded-2xl p-4 sm:p-5 border border-emerald-950/80 shadow-md">
+        <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2.5">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+          <span>How Visual Inspection Works (3 Simple Steps)</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950">
+            <div className="font-bold text-white mb-1 flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700 text-[10px] font-mono flex items-center justify-center font-bold">1</span>
+              <span>Pick or Upload Graphic</span>
+            </div>
+            <p className="text-zinc-400 text-[11px] leading-relaxed">
+              Click a demo ad below, or click <strong>Upload Custom Graphic</strong> to test your own PNG or JPG design.
+            </p>
+          </div>
+          <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950">
+            <div className="font-bold text-white mb-1 flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700 text-[10px] font-mono flex items-center justify-center font-bold">2</span>
+              <span>Automatic Brand Check</span>
+            </div>
+            <p className="text-zinc-400 text-[11px] leading-relaxed">
+              We check your colors against official brand tokens, make sure your logo has clean breathing room, and read the text to catch forbidden words.
+            </p>
+          </div>
+          <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950">
+            <div className="font-bold text-white mb-1 flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700 text-[10px] font-mono flex items-center justify-center font-bold">3</span>
+              <span>Click Any Box to Fix</span>
+            </div>
+            <p className="text-zinc-400 text-[11px] leading-relaxed">
+              Click on any colored box on the design image to see the problem in plain English and apply the recommended fix.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -436,9 +473,9 @@ export default function VisualIdentityPage() {
                   {/* Vector 1: Color */}
                   <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 flex items-center gap-1">
+                      <span className="text-zinc-400 flex items-center gap-1 font-semibold">
                         <Palette className="w-3 h-3 text-emerald-400" />
-                        <span>Color Gamut</span>
+                        <span>Color Match</span>
                       </span>
                       <span className="font-mono font-bold text-white">
                         {activeVisualReport.score.color_palette_score}%
@@ -452,15 +489,15 @@ export default function VisualIdentityPage() {
                         style={{ width: `${activeVisualReport.score.color_palette_score}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-zinc-400 block truncate">Weight: 30%</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Official brand colors</span>
                   </div>
 
                   {/* Vector 2: Logo */}
                   <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 flex items-center gap-1">
+                      <span className="text-zinc-400 flex items-center gap-1 font-semibold">
                         <Maximize2 className="w-3 h-3 text-emerald-400" />
-                        <span>Logo Geometry</span>
+                        <span>Logo & Margins</span>
                       </span>
                       <span className="font-mono font-bold text-white">
                         {activeVisualReport.score.logo_integrity_score}%
@@ -474,15 +511,15 @@ export default function VisualIdentityPage() {
                         style={{ width: `${activeVisualReport.score.logo_integrity_score}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-zinc-400 block truncate">Clearance: 0.5H</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Clean breathing room</span>
                   </div>
 
                   {/* Vector 3: OCR Copy */}
                   <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 flex items-center gap-1">
+                      <span className="text-zinc-400 flex items-center gap-1 font-semibold">
                         <Type className="w-3 h-3 text-emerald-400" />
-                        <span>Embedded Copy</span>
+                        <span>Text in Graphic</span>
                       </span>
                       <span className="font-mono font-bold text-white">
                         {activeVisualReport.score.embedded_copy_score}%
@@ -496,15 +533,15 @@ export default function VisualIdentityPage() {
                         style={{ width: `${activeVisualReport.score.embedded_copy_score}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-zinc-400 block truncate">OCR Linter Gate</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">No forbidden claims</span>
                   </div>
 
                   {/* Vector 4: Accessibility */}
                   <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 flex items-center gap-1">
+                      <span className="text-zinc-400 flex items-center gap-1 font-semibold">
                         <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                        <span>WCAG 2.1 Contrast</span>
+                        <span>Readability</span>
                       </span>
                       <span className="font-mono font-bold text-white">
                         {activeVisualReport.score.wcag_contrast_score}%
@@ -518,7 +555,7 @@ export default function VisualIdentityPage() {
                         style={{ width: `${activeVisualReport.score.wcag_contrast_score}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-zinc-400 block truncate">Target: 4.5:1 AA</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Sharp contrast</span>
                   </div>
                 </div>
               </div>
@@ -532,14 +569,14 @@ export default function VisualIdentityPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-950/80">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-black text-white uppercase tracking-wider">
-                    Interactive Design Inspection Canvas
+                    Design Canvas & Scanner
                   </h2>
                   {isInspecting && <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />}
                 </div>
 
                 {/* Layer Toggles */}
                 <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
-                  <span className="text-zinc-400 mr-1 font-bold">Layers:</span>
+                  <span className="text-zinc-400 mr-1 font-bold">Show boxes:</span>
                   <button
                     type="button"
                     onClick={() => setShowColorOverlays(!showColorOverlays)}
@@ -798,7 +835,7 @@ export default function VisualIdentityPage() {
               <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-1">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Click any highlighted region on the canvas to inspect violation details and apply one-click remediation.</span>
+                  <span>Click any highlighted box on the design above to inspect the issue and fix it.</span>
                 </span>
                 {selectedFindingId && (
                   <button
@@ -820,11 +857,11 @@ export default function VisualIdentityPage() {
                   <div className="flex items-center gap-2">
                     <Filter className="w-3.5 h-3.5 text-emerald-400" />
                     <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Design Audit Register
+                      Found Issues & Fixes
                     </h3>
                   </div>
                   <span className="text-[11px] font-mono text-zinc-400">
-                    {filteredFindings.length} of {activeVisualReport?.findings?.length || 0}
+                    {filteredFindings.length} of {activeVisualReport?.findings?.length || 0} issues
                   </span>
                 </div>
 
@@ -857,7 +894,7 @@ export default function VisualIdentityPage() {
                 <div className="bg-gradient-to-b from-[#0F1C14] to-[#0A120E] rounded-2xl p-4 border-2 border-emerald-500 shadow-xl space-y-3 animate-scale-in">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700">
-                      Selected Region Focus
+                      Focused Issue
                     </span>
                     <button
                       type="button"
@@ -893,7 +930,7 @@ export default function VisualIdentityPage() {
                     className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Zap className="w-3.5 h-3.5" />
-                    <span>Apply Brand Remediation</span>
+                    <span>Apply Recommended Fix</span>
                   </button>
                 </div>
               )}
@@ -951,10 +988,10 @@ export default function VisualIdentityPage() {
 
                         <div className="flex items-center justify-between text-[11px] pt-1 border-t border-emerald-950/60">
                           <span className="text-zinc-500 font-mono truncate max-w-[180px]">
-                            {finding.recommended_value ? `Target: ${finding.recommended_value}` : 'Requires Adjustment'}
+                            {finding.recommended_value ? `Recommended: ${finding.recommended_value}` : 'Needs Adjustment'}
                           </span>
                           <span className="text-emerald-400 font-bold hover:underline flex items-center gap-1">
-                            <span>Remediate</span>
+                            <span>Fix This</span>
                             <ChevronRight className="w-3 h-3" />
                           </span>
                         </div>

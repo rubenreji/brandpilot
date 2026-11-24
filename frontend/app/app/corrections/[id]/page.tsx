@@ -30,7 +30,10 @@ import {
   RotateCcw,
   Cpu,
   ShieldAlert,
-  Layers
+  Layers,
+  MessageSquare,
+  Scale,
+  Users
 } from 'lucide-react';
 
 export default function CorrectionStudioPage() {
@@ -50,7 +53,10 @@ export default function CorrectionStudioPage() {
     analyzeTextRealtime,
     createLiveSubmission,
     showToast,
-    currentUser
+    currentUser,
+    collaborativeComments,
+    addCollaborativeComment,
+    resolveCollaborativeComment
   } = useBrandPilot();
 
   const submission = (submissionId && submissionId !== 'live' ? getSubmission(submissionId) : null) || (submissions && submissions[0]) || null;
@@ -68,7 +74,9 @@ export default function CorrectionStudioPage() {
   const [isNewDraftModalOpen, setIsNewDraftModalOpen] = useState(false);
   const [newDraftTitle, setNewDraftTitle] = useState('');
   const [newDraftContent, setNewDraftContent] = useState('');
-  const [filterTab, setFilterTab] = useState<'all' | 'contradicted' | 'unverified' | 'supported'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'contradicted' | 'unverified' | 'supported' | 'comments'>('all');
+  const [commentInput, setCommentInput] = useState('');
+  const [isLegalEscalation, setIsLegalEscalation] = useState(false);
 
   const claimSummary = useMemo(() => {
     if (submission?.claim_verification_summary) {
@@ -385,6 +393,89 @@ ${submission.current_text}
     return <div className="whitespace-pre-wrap leading-relaxed">{elements}</div>;
   };
 
+  const renderRedlineDiff = () => {
+    if (!submission) return null;
+    const applied = findings.filter(f => f.status === 'accepted');
+
+    return (
+      <div className="space-y-4">
+        <div className="p-3 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
+          <div className="flex items-center justify-between text-xs pb-2 border-b border-emerald-950">
+            <span className="font-bold text-white flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>Enterprise Redline Diff (Legal Mark-up View)</span>
+            </span>
+            <div className="flex items-center gap-3 text-[10px] font-mono">
+              <span className="text-rose-400 line-through">Red = Deleted Raw Copy</span>
+              <span className="text-emerald-400 font-bold">Green = Approved Brand Token</span>
+            </div>
+          </div>
+
+          {applied.length === 0 ? (
+            <div className="p-4 text-center text-xs text-zinc-400 italic">
+              No corrections accepted yet. Click "Accept all fixes" or accept individual suggestions to view redline deletions and approved additions.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {applied.map((f, idx) => (
+                <div key={idx} className="p-2.5 rounded-lg bg-[#0A120E] border border-emerald-950/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Issue #{idx + 1} ({f.category}):</span>
+                    <div>
+                      <del className="bg-rose-950/80 text-rose-300 line-through px-1.5 py-0.5 rounded mr-2 border border-rose-800">
+                        "{f.original_text}"
+                      </del>
+                      <ins className="bg-emerald-950/80 text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-800 no-underline">
+                        "{f.suggested_correction}"
+                      </ins>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[200px]">
+                    Rule: {f.relevant_brand_rule}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 bg-[#060B08] rounded-xl border border-emerald-950 space-y-2">
+          <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between pb-2 border-b border-emerald-950">
+            <span>Clean Consolidated Draft</span>
+            <span className="text-[10px] font-mono text-emerald-400 font-bold">{submission.compliance_score}% Compliant</span>
+          </div>
+          <div className="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto font-sans">
+            {submission.current_text}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handlePostComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentInput.trim() || !submission) return;
+    addCollaborativeComment(
+      submission.id,
+      commentInput.trim(),
+      activeFindingId ? findings.find(f => f.id === activeFindingId)?.original_text : undefined,
+      isLegalEscalation
+    );
+    setCommentInput('');
+    setIsLegalEscalation(false);
+  };
+
+  const handleQuickLegalEscalate = () => {
+    if (!submission) return;
+    addCollaborativeComment(
+      submission.id,
+      "Escalated to Corporate Legal Counsel: Please verify statutory SLA representations and liability disclaimers before publication.",
+      undefined,
+      true
+    );
+    setFilterTab('comments');
+  };
+
   if (!submission) {
     return (
       <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6 text-zinc-100">
@@ -516,6 +607,16 @@ ${submission.current_text}
           >
             <Download className="w-3.5 h-3.5 text-zinc-400" />
             <span>Export</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleQuickLegalEscalate}
+            className="px-3.5 py-2.5 bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-200 text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Escalate complex statutory or SLA claims directly to corporate Legal Counsel"
+          >
+            <Scale className="w-3.5 h-3.5 text-purple-400" />
+            <span>Escalate to Legal</span>
           </button>
 
           <button
@@ -701,29 +802,7 @@ ${submission.current_text}
             </div>
           ) : viewMode === 'diff' ? (
             <div className="space-y-4 animate-fade-in">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-rose-950/30 border border-rose-900/60 rounded-xl space-y-2">
-                  <div className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Original Uploaded Draft</span>
-                    <span className="text-[10px] font-normal lowercase">initial audit</span>
-                  </div>
-                  <div className="text-xs text-zinc-300 font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
-                    {submission.original_text}
-                  </div>
-                </div>
-
-                <div className="p-4 bg-emerald-950/30 border border-emerald-900/60 rounded-xl space-y-2">
-                  <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Current Compliant Version</span>
-                    <span className="text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full">
-                      {submission.compliance_score}% score
-                    </span>
-                  </div>
-                  <div className="text-xs text-white font-sans leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-1">
-                    {submission.current_text}
-                  </div>
-                </div>
-              </div>
+              {renderRedlineDiff()}
             </div>
           ) : (
             <div className="space-y-3 animate-fade-in">
@@ -819,10 +898,161 @@ ${submission.current_text}
               <CheckCircle2 className="w-3 h-3" />
               <span>Verified Facts ({claimSummary.supported_count})</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab('comments')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                filterTab === 'comments'
+                  ? 'bg-purple-500 text-white font-extrabold'
+                  : 'text-purple-400 hover:text-purple-300'
+              }`}
+            >
+              <MessageSquare className="w-3 h-3" />
+              <span>Discussion ({collaborativeComments.filter(c => c.submission_id === submission.id).length})</span>
+            </button>
           </div>
 
-          {/* View: Verified Claims Register */}
-          {filterTab === 'supported' ? (
+          {/* View: Team Discussions & Collaborative Comments */}
+          {filterTab === 'comments' ? (
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-[#0A120E] rounded-2xl p-4 border border-purple-950/80 shadow-md space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-purple-950/60">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-purple-400" />
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                      Collaborative Review Thread
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-purple-300">
+                    {collaborativeComments.filter(c => c.submission_id === submission.id).length} comments
+                  </span>
+                </div>
+
+                {/* Comment Input Box */}
+                <form onSubmit={handlePostComment} className="space-y-2.5">
+                  <textarea
+                    rows={3}
+                    value={commentInput}
+                    onChange={e => setCommentInput(e.target.value)}
+                    placeholder="Add a review note, question, or @mention a team member..."
+                    className="w-full text-xs p-3 bg-[#060B08] border border-purple-900/60 rounded-xl text-white focus:outline-none focus:border-purple-500 leading-relaxed"
+                  />
+
+                  {/* Quick @mention chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                    <span className="text-zinc-500">Quick @mention:</span>
+                    <button
+                      type="button"
+                      onClick={() => setCommentInput(prev => prev + '@sarah ')}
+                      className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 hover:bg-purple-900 border border-purple-800"
+                    >
+                      @sarah (Reviewer)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommentInput(prev => prev + '@marcus ')}
+                      className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 hover:bg-emerald-900 border border-emerald-800"
+                    >
+                      @marcus (Creator)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCommentInput(prev => prev + '@legal ');
+                        setIsLegalEscalation(true);
+                      }}
+                      className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 hover:bg-amber-900 border border-amber-800"
+                    >
+                      @legal (Counsel)
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <label className="flex items-center gap-1.5 text-xs text-purple-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isLegalEscalation}
+                        onChange={e => setIsLegalEscalation(e.target.checked)}
+                        className="rounded text-purple-500 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="flex items-center gap-1">
+                        <Scale className="w-3 h-3 text-purple-400" />
+                        <span>Flag as Legal Escalation</span>
+                      </span>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={!commentInput.trim()}
+                      className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Post</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Threaded Comments List */}
+                <div className="space-y-3 pt-2">
+                  {collaborativeComments.filter(c => c.submission_id === submission.id).map(c => (
+                    <div
+                      key={c.id}
+                      className={`p-3 rounded-xl border text-xs space-y-2 ${
+                        c.is_legal_escalation
+                          ? 'bg-purple-950/30 border-purple-700/60'
+                          : 'bg-[#060B08] border-emerald-950'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-purple-950 border border-purple-700 text-purple-300 flex items-center justify-center font-bold text-[10px]">
+                            {c.user_avatar || 'U'}
+                          </div>
+                          <div>
+                            <span className="font-bold text-white mr-1.5">{c.user_name}</span>
+                            <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-black/60 text-zinc-400 border border-zinc-800">
+                              {c.user_role}
+                            </span>
+                          </div>
+                        </div>
+
+                        {c.is_legal_escalation && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-900 text-purple-200 border border-purple-600 font-bold flex items-center gap-1">
+                            <Scale className="w-2.5 h-2.5" /> Legal Escalate
+                          </span>
+                        )}
+                      </div>
+
+                      {c.target_text && (
+                        <div className="p-1.5 rounded bg-black/40 border border-zinc-800 text-[11px] text-zinc-400 italic">
+                          Target: "{c.target_text}"
+                        </div>
+                      )}
+
+                      <p className="text-zinc-300 leading-relaxed text-[11px]">{c.comment_text}</p>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-purple-950/40 text-[10px] text-zinc-500">
+                        <span>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        {!c.resolved ? (
+                          <button
+                            type="button"
+                            onClick={() => resolveCollaborativeComment(c.id)}
+                            className="text-emerald-400 hover:underline font-semibold cursor-pointer"
+                          >
+                            Mark Resolved ✓
+                          </button>
+                        ) : (
+                          <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Resolved
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : filterTab === 'supported' ? (
             <div className="space-y-3 animate-fade-in">
               <div className="p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-xl text-xs text-emerald-300">
                 <div className="font-bold flex items-center gap-1.5 mb-1 text-white">

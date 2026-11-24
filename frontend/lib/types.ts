@@ -627,6 +627,100 @@ export interface VisualPreset {
   status: 'compliant' | 'non_compliant';
 }
 
+// =============================================================================
+// COMMERCIAL ENTERPRISE SOFTWARE EXTENSIONS
+// =============================================================================
+
+// 1. Brand Sentinel: Automated 24/7 Live Crawler & Monitor
+export interface SentinelMonitoredTarget {
+  id: string;
+  url: string;
+  label: string;
+  category: 'website' | 'blog' | 'docs' | 'social';
+  check_frequency: '1h' | '6h' | '24h' | 'weekly';
+  status: 'clean' | 'drift_detected' | 'checking' | 'error';
+  last_checked: string;
+  compliance_score: number;
+  drift_count: number;
+  active: boolean;
+}
+
+export interface SentinelDriftIssue {
+  id: string;
+  target_id: string;
+  target_url: string;
+  element_selector: string;
+  offending_text: string;
+  suggested_fix: string;
+  rule_violated: string;
+  severity: 'critical' | 'high' | 'medium';
+  first_detected_at: string;
+  status: 'active' | 'resolved' | 'dismissed';
+}
+
+// 2. Stripe Billing & Subscription Tiers
+export interface BillingPlanTier {
+  id: 'starter' | 'professional' | 'enterprise';
+  name: string;
+  price_monthly: number;
+  price_annual: number;
+  description: string;
+  features: string[];
+  audits_limit: number;
+  visual_scans_limit: number;
+  seats_limit: number;
+  sentinel_targets_limit: number;
+  is_popular?: boolean;
+}
+
+export interface CommercialInvoice {
+  id: string;
+  invoice_number: string;
+  date: string;
+  amount: string;
+  status: 'Paid' | 'Pending' | 'Draft';
+  plan_name: string;
+  pdf_url?: string;
+}
+
+// 3. Collaborative Review & In-Line Commenting
+export interface CollaborativeComment {
+  id: string;
+  submission_id: string;
+  user_id: string;
+  user_name: string;
+  user_role: UserRole;
+  user_avatar?: string;
+  target_text?: string;
+  comment_text: string;
+  created_at: string;
+  resolved: boolean;
+  is_legal_escalation?: boolean;
+}
+
+// 4. Cloud Storage & DAM Connectors
+export interface DAMConnector {
+  id: string;
+  provider: 'aws_s3' | 'cloudflare_r2' | 'google_drive' | 'sharepoint' | 'bynder';
+  name: string;
+  status: 'connected' | 'disconnected' | 'syncing';
+  last_sync_at: string;
+  synced_assets_count: number;
+  bucket_or_folder?: string;
+  auto_sync: boolean;
+}
+
+// 5. Custom AI Engine & Model Provider
+export interface AIProviderConfig {
+  provider: 'brandpilot_default' | 'openai' | 'anthropic' | 'google_vertex' | 'azure_openai';
+  model_name: string;
+  api_key_masked?: string;
+  endpoint_url?: string;
+  data_residency_region: 'us' | 'eu' | 'ap';
+  zero_data_retention: boolean;
+  status: 'active' | 'configured' | 'unconfigured';
+}
+
 
 
 

@@ -36,7 +36,14 @@ import {
   VerifiedClaim,
   VisualInspectionReport,
   VisualFinding,
-  VisualPreset
+  VisualPreset,
+  SentinelMonitoredTarget,
+  SentinelDriftIssue,
+  BillingPlanTier,
+  CommercialInvoice,
+  CollaborativeComment,
+  DAMConnector,
+  AIProviderConfig
 } from './types';
 import {
   DEMO_WORKSPACE,
@@ -214,6 +221,32 @@ interface BrandPilotContextType {
   availableWorkspaces: Workspace[];
   allBrandBases: BrandBaseDefinition[];
   switchWorkspace: (workspaceId: string) => void;
+
+  // Commercial Extensions: Brand Sentinel 24/7 Monitor
+  sentinelTargets: SentinelMonitoredTarget[];
+  sentinelDriftIssues: SentinelDriftIssue[];
+  addSentinelTarget: (payload: { url: string; label: string; category: 'website' | 'blog' | 'docs' | 'social'; frequency: '1h' | '6h' | '24h' | 'weekly' }) => void;
+  runSentinelCrawl: (targetId: string) => Promise<void>;
+  resolveDriftIssue: (issueId: string) => void;
+
+  // Stripe Billing & Subscriptions
+  billingPlan: 'starter' | 'professional' | 'enterprise';
+  updateBillingPlan: (planId: 'starter' | 'professional' | 'enterprise') => void;
+  downloadInvoicePdf: (invoiceId: string) => void;
+
+  // Collaborative Review & In-Line Comments
+  collaborativeComments: CollaborativeComment[];
+  addCollaborativeComment: (submissionId: string, commentText: string, targetText?: string, isLegalEscalation?: boolean) => void;
+  resolveCollaborativeComment: (commentId: string) => void;
+
+  // Cloud Storage & DAM Connectors
+  damConnectors: DAMConnector[];
+  syncDAMConnector: (connectorId: string) => Promise<void>;
+  toggleDAMAutoSync: (connectorId: string) => void;
+
+  // AI Model Engine & BYOK Switcher
+  aiProviderConfig: AIProviderConfig;
+  updateAIProviderConfig: (config: Partial<AIProviderConfig>) => void;
 
   // Toast UI
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -2882,6 +2915,280 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
     };
   };
 
+  // --- 1. BRAND SENTINEL STATE & ACTIONS ---
+  const [sentinelTargets, setSentinelTargets] = useState<SentinelMonitoredTarget[]>([
+    {
+      id: 'target-1',
+      url: 'https://auracloud.io',
+      label: 'Main Marketing Homepage',
+      category: 'website',
+      check_frequency: '1h',
+      status: 'clean',
+      last_checked: '10 mins ago',
+      compliance_score: 98,
+      drift_count: 0,
+      active: true
+    },
+    {
+      id: 'target-2',
+      url: 'https://auracloud.io/pricing',
+      label: 'Public Pricing & SLA Table',
+      category: 'website',
+      check_frequency: '6h',
+      status: 'drift_detected',
+      last_checked: '25 mins ago',
+      compliance_score: 74,
+      drift_count: 2,
+      active: true
+    },
+    {
+      id: 'target-3',
+      url: 'https://auracloud.io/blog/enterprise-cloud',
+      label: 'Enterprise Product Blog',
+      category: 'blog',
+      check_frequency: '24h',
+      status: 'clean',
+      last_checked: '2 hours ago',
+      compliance_score: 96,
+      drift_count: 0,
+      active: true
+    },
+    {
+      id: 'target-4',
+      url: 'https://linkedin.com/company/auracloud',
+      label: 'LinkedIn Corporate Feed',
+      category: 'social',
+      check_frequency: '6h',
+      status: 'drift_detected',
+      last_checked: '45 mins ago',
+      compliance_score: 82,
+      drift_count: 1,
+      active: true
+    }
+  ]);
+
+  const [sentinelDriftIssues, setSentinelDriftIssues] = useState<SentinelDriftIssue[]>([
+    {
+      id: 'drift-1',
+      target_id: 'target-2',
+      target_url: 'https://auracloud.io/pricing',
+      element_selector: '#hero-headline-sla',
+      offending_text: 'Guaranteed 100% uptime on all production instances',
+      suggested_fix: '99.95% monthly uptime SLA backed by financial service credits',
+      rule_violated: 'Schedule B Master SLA Compliance',
+      severity: 'critical',
+      first_detected_at: '2026-11-22T08:30:00Z',
+      status: 'active'
+    },
+    {
+      id: 'drift-2',
+      target_id: 'target-2',
+      target_url: 'https://auracloud.io/pricing',
+      element_selector: '.pricing-card-enterprise .badge',
+      offending_text: 'The cheapest multi-cloud orchestration on the market',
+      suggested_fix: '$49/node transparent enterprise cloud pricing',
+      rule_violated: 'Section 4.1: Unsubstantiated Superlative Prohibition',
+      severity: 'high',
+      first_detected_at: '2026-11-22T08:30:00Z',
+      status: 'active'
+    },
+    {
+      id: 'drift-3',
+      target_id: 'target-4',
+      target_url: 'https://linkedin.com/company/auracloud',
+      element_selector: '.feed-post-latest',
+      offending_text: 'Eliminate all cloud outages with proprietary AI magic',
+      suggested_fix: 'Optimize multi-cloud resilience with verified machine learning models',
+      rule_violated: 'Section 1.2: Prohibited Speculative Hype',
+      severity: 'high',
+      first_detected_at: '2026-11-22T09:15:00Z',
+      status: 'active'
+    }
+  ]);
+
+  const addSentinelTarget = (payload: { url: string; label: string; category: 'website' | 'blog' | 'docs' | 'social'; frequency: '1h' | '6h' | '24h' | 'weekly' }) => {
+    const newTarget: SentinelMonitoredTarget = {
+      id: `target-${Date.now()}`,
+      url: payload.url,
+      label: payload.label,
+      category: payload.category,
+      check_frequency: payload.frequency,
+      status: 'clean',
+      last_checked: 'Just now',
+      compliance_score: 100,
+      drift_count: 0,
+      active: true
+    };
+    setSentinelTargets(prev => [newTarget, ...prev]);
+    showToast(`Added ${payload.label} to Brand Sentinel monitor!`, 'success');
+  };
+
+  const runSentinelCrawl = async (targetId: string) => {
+    showToast('Brand Sentinel crawler running live site inspection...', 'info');
+    await new Promise(r => setTimeout(r, 900));
+    setSentinelTargets(prev => prev.map(t => {
+      if (t.id === targetId) {
+        return {
+          ...t,
+          last_checked: 'Just now',
+          status: t.drift_count > 0 ? 'drift_detected' : 'clean'
+        };
+      }
+      return t;
+    }));
+    showToast('Live site scan completed! Report updated.', 'success');
+  };
+
+  const resolveDriftIssue = (issueId: string) => {
+    setSentinelDriftIssues(prev => prev.map(i => i.id === issueId ? { ...i, status: 'resolved' as const } : i));
+    showToast('Marked drift issue as resolved. Re-verifying site...', 'success');
+  };
+
+  // --- 2. STRIPE BILLING & TIERS ---
+  const [billingPlan, setBillingPlan] = useState<'starter' | 'professional' | 'enterprise'>('professional');
+
+  const updateBillingPlan = (planId: 'starter' | 'professional' | 'enterprise') => {
+    setBillingPlan(planId);
+    showToast(`Successfully upgraded organization to ${planId.toUpperCase()} Plan!`, 'success');
+  };
+
+  const downloadInvoicePdf = (invoiceId: string) => {
+    showToast(`Downloading official VAT tax receipt: ${invoiceId}.pdf`, 'info');
+  };
+
+  // --- 3. COLLABORATIVE COMMENTS & REDLINES ---
+  const [collaborativeComments, setCollaborativeComments] = useState<CollaborativeComment[]>([
+    {
+      id: 'comment-1',
+      submission_id: 'sub-demo-flagged',
+      user_id: 'user-reviewer-1',
+      user_name: 'Sarah Lin',
+      user_role: 'reviewer',
+      user_avatar: 'SL',
+      target_text: 'guaranteed 100% uptime',
+      comment_text: '@marcus Legal verified that our Master Services Agreement only indemnifies 99.95% uptime. Please accept the 99.95% SLA replacement.',
+      created_at: '2026-11-22T09:12:00Z',
+      resolved: false,
+      is_legal_escalation: true
+    },
+    {
+      id: 'comment-2',
+      submission_id: 'sub-demo-flagged',
+      user_id: 'user-creator-1',
+      user_name: 'Marcus Vance',
+      user_role: 'creator',
+      user_avatar: 'MV',
+      target_text: 'cheapest cloud platform',
+      comment_text: '@sarah Accepted the suggestion! Changed to $49/node transparent pricing structure.',
+      created_at: '2026-11-22T09:18:00Z',
+      resolved: true,
+      is_legal_escalation: false
+    }
+  ]);
+
+  const addCollaborativeComment = (submissionId: string, commentText: string, targetText?: string, isLegalEscalation?: boolean) => {
+    const newComment: CollaborativeComment = {
+      id: `comm-${Date.now()}`,
+      submission_id: submissionId,
+      user_id: currentUser.id,
+      user_name: currentUser.full_name || currentUser.name,
+      user_role: currentRole,
+      user_avatar: (currentUser.full_name || currentUser.name).split(' ').map(n => n[0]).join(''),
+      target_text: targetText,
+      comment_text: commentText,
+      created_at: new Date().toISOString(),
+      resolved: false,
+      is_legal_escalation: !!isLegalEscalation
+    };
+    setCollaborativeComments(prev => [newComment, ...prev]);
+    showToast(isLegalEscalation ? 'Escalated to Legal Review queue!' : 'Added discussion comment!', 'success');
+  };
+
+  const resolveCollaborativeComment = (commentId: string) => {
+    setCollaborativeComments(prev => prev.map(c => c.id === commentId ? { ...c, resolved: true } : c));
+    showToast('Comment resolved and archived.', 'info');
+  };
+
+  // --- 4. CLOUD STORAGE & DAM CONNECTORS ---
+  const [damConnectors, setDamConnectors] = useState<DAMConnector[]>([
+    {
+      id: 'dam-s3',
+      provider: 'aws_s3',
+      name: 'AWS S3 Asset Bucket (us-east-1)',
+      status: 'connected',
+      last_sync_at: '4 mins ago',
+      synced_assets_count: 48,
+      bucket_or_folder: 's3://auracloud-brand-guidelines-prod',
+      auto_sync: true
+    },
+    {
+      id: 'dam-r2',
+      provider: 'cloudflare_r2',
+      name: 'Cloudflare R2 Global Edge CDN',
+      status: 'connected',
+      last_sync_at: '12 mins ago',
+      synced_assets_count: 14,
+      bucket_or_folder: 'r2://auracloud-media-edge',
+      auto_sync: true
+    },
+    {
+      id: 'dam-gdrive',
+      provider: 'google_drive',
+      name: 'Google Drive Corporate Guidelines Folder',
+      status: 'connected',
+      last_sync_at: '1 hour ago',
+      synced_assets_count: 6,
+      bucket_or_folder: 'AuraCloud/Brand/2026-Guidelines-PDFs',
+      auto_sync: true
+    },
+    {
+      id: 'dam-sharepoint',
+      provider: 'sharepoint',
+      name: 'Microsoft SharePoint Document Library',
+      status: 'connected',
+      last_sync_at: '3 hours ago',
+      synced_assets_count: 9,
+      bucket_or_folder: 'SharePoint/Marketing/Assets',
+      auto_sync: false
+    },
+    {
+      id: 'dam-bynder',
+      provider: 'bynder',
+      name: 'Bynder Brand Portal & Vector DAM',
+      status: 'connected',
+      last_sync_at: '30 mins ago',
+      synced_assets_count: 32,
+      bucket_or_folder: 'auracloud.bynder.com/logos',
+      auto_sync: true
+    }
+  ]);
+
+  const syncDAMConnector = async (connectorId: string) => {
+    showToast('Synchronizing digital asset repository...', 'info');
+    await new Promise(r => setTimeout(r, 800));
+    setDamConnectors(prev => prev.map(d => d.id === connectorId ? { ...d, last_sync_at: 'Just now' } : d));
+    showToast('Digital asset sync completed! Brand guidelines refreshed.', 'success');
+  };
+
+  const toggleDAMAutoSync = (connectorId: string) => {
+    setDamConnectors(prev => prev.map(d => d.id === connectorId ? { ...d, auto_sync: !d.auto_sync } : d));
+    showToast('Updated DAM automated synchronization preference.', 'info');
+  };
+
+  // --- 5. AI ENGINE & BYOK MODEL PROVIDER ---
+  const [aiProviderConfig, setAiProviderConfig] = useState<AIProviderConfig>({
+    provider: 'brandpilot_default',
+    model_name: 'BrandPilot Enterprise Hybrid (Deterministic + Vector RAG)',
+    data_residency_region: 'us',
+    zero_data_retention: true,
+    status: 'active'
+  });
+
+  const updateAIProviderConfig = (cfg: Partial<AIProviderConfig>) => {
+    setAiProviderConfig(prev => ({ ...prev, ...cfg, status: 'active' }));
+    showToast(`Updated AI engine provider: ${cfg.model_name || cfg.provider}`, 'success');
+  };
+
   return (
     <BrandPilotContext.Provider
       value={{
@@ -2961,6 +3268,29 @@ export function BrandPilotProvider({ children }: { children: React.ReactNode }) 
         availableWorkspaces: ALL_WORKSPACES,
         allBrandBases: ALL_BRAND_BASES,
         switchWorkspace,
+
+        // Commercial Extensions
+        sentinelTargets,
+        sentinelDriftIssues,
+        addSentinelTarget,
+        runSentinelCrawl,
+        resolveDriftIssue,
+
+        billingPlan,
+        updateBillingPlan,
+        downloadInvoicePdf,
+
+        collaborativeComments,
+        addCollaborativeComment,
+        resolveCollaborativeComment,
+
+        damConnectors,
+        syncDAMConnector,
+        toggleDAMAutoSync,
+
+        aiProviderConfig,
+        updateAIProviderConfig,
+
         showToast
       }}
     >

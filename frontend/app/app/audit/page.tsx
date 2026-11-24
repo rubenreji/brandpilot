@@ -364,13 +364,13 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
         <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
           <span>Brand Compliance Engine</span>
           <span>•</span>
-          <span>Workspace Ingestion</span>
+          <span>Draft & Document Checker</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
           Content Auditing Workspace
         </h1>
-        <p className="text-sm text-zinc-400 mt-1">
-          Submit drafts or upload documents for automated multi-vector compliance evaluation against active brand guidelines.
+        <p className="text-sm text-zinc-400 mt-1 max-w-2xl">
+          Paste your marketing copy or upload files (DOCX, PDF, TXT) to check for off-brand claims, forbidden terms, incorrect facts, and tone issues in seconds.
         </p>
       </div>
 
@@ -386,7 +386,7 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
           }`}
         >
           <FileCheck2 className="w-4 h-4" />
-          <span>Internal Draft Audit (Brand Governance)</span>
+          <span>Check Internal Content (Articles, Ads & Copy)</span>
         </button>
 
         <button
@@ -399,9 +399,9 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
           }`}
         >
           <Swords className="w-4 h-4 text-amber-400" />
-          <span>Competitor Claims & Counter-Campaign Analyzer</span>
+          <span>Scan Competitor Claims & Counter-Campaigns</span>
           <span className="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/40">
-            Battleground
+            Compare
           </span>
         </button>
       </div>
@@ -415,20 +415,20 @@ As enterprise architectures scale, our automated cloud orchestration ensures con
             <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
             <div>
               <span className="text-xs font-bold text-white block">
-                Target Regulatory Jurisdiction & Statutory Gating
+                Target Advertising Rules & Legal Standard
               </span>
               <span className="text-[11px] text-zinc-400">
-                Activates country-specific advertising laws (FTC, EU AI Act, UK ASA) alongside corporate brand guidelines.
+                Applies regional advertising laws (FTC in US, EU AI Act in Europe, ASA in UK) alongside your company brand rules.
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto">
             {[
-              { id: 'global', label: '🌐 Global Standard' },
-              { id: 'us_ftc', label: '🇺🇸 US FTC & Lanham' },
-              { id: 'eu_ai_act', label: '🇪🇺 EU AI Act' },
-              { id: 'uk_asa', label: '🇬🇧 UK ASA' }
+              { id: 'global', label: '🌐 Global (Truthful Ads)' },
+              { id: 'us_ftc', label: '🇺🇸 US (FTC Truth-in-Ads)' },
+              { id: 'eu_ai_act', label: '🇪🇺 EU (AI Act Rules)' },
+              { id: 'uk_asa', label: '🇬🇧 UK (ASA Standards)' }
             ].map(j => (
               <button
                 key={j.id}

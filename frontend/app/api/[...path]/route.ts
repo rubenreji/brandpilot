@@ -250,6 +250,115 @@ export async function GET(
     });
   }
 
+  // 6b. Brand Sentinel Public Crawler API
+  if (pathStr === 'sentinel/targets') {
+    return NextResponse.json({
+      status: 'active',
+      targets_count: 4,
+      total_active_drift: 3,
+      health_score: 88,
+      last_scheduled_crawl: new Date().toISOString()
+    });
+  }
+
+  // 6c. Enterprise DAM & Cloud Connectors API
+  if (pathStr === 'integrations/dam/status') {
+    return NextResponse.json({
+      status: 'connected',
+      repositories_synced: 5,
+      total_assets_indexed: 109,
+      last_sync_timestamp: new Date().toISOString()
+    });
+  }
+
+  // 6d. Legal Risk & Statutory Exposure API
+  if (pathStr === 'risk/summary') {
+    return NextResponse.json({
+      projected_max_exposure: 410464,
+      baseline_statutory_floor: 51744,
+      active_violations_count: 4,
+      frameworks: ['FTC Act Section 5', 'EU Green Claims COM/2023/166', 'SEC Reg FD', 'GDPR Art. 28'],
+      safe_harbor_remediation_rate: 100
+    });
+  }
+
+  // 6e. Executive PDF & Boardroom Ledger API
+  if (pathStr === 'reports/executive') {
+    return NextResponse.json({
+      overall_compliance_score: 94,
+      industry_peer_percentile: 'Top 3%',
+      tamper_proof_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      certified_date: new Date().toISOString()
+    });
+  }
+
+  // 6f. Living Styleguide Tokens API
+  if (pathStr === 'styleguide/tokens') {
+    return NextResponse.json({
+      brand: 'AuraCloud',
+      primary_color: '#00FF87',
+      secondary_color: '#10B981',
+      canvas_background: '#050806',
+      surface_card: '#0A110D',
+      typography: {
+        font_family: 'Inter, -apple-system, sans-serif',
+        scale: ['Display 48px', 'H1 32px', 'H2 24px', 'Body 15px', 'Mono 13px']
+      }
+    });
+  }
+
+  // 6g. Video Ad & Commercial Frame Inspection API
+  if (pathStr === 'video/inspection') {
+    return NextResponse.json({
+      total_frames_analyzed: 30,
+      disclaimer_dwell_compliance: 'flagged_short_dwell',
+      audio_visual_alignment: 'discrepancy_detected',
+      clearance_score: 82
+    });
+  }
+
+  // 6h. Multi-Territory Regulatory Matrix API
+  if (pathStr === 'jurisdiction/matrix') {
+    return NextResponse.json({
+      cleared_territories: ['United States', 'United Kingdom', 'Australia', 'Japan'],
+      action_required_territories: ['European Union'],
+      active_frameworks_count: 5
+    });
+  }
+
+  // 6i. 3D Physical Packaging & Spatial Inspection API
+  if (pathStr === 'packaging/inspection') {
+    return NextResponse.json({
+      active_preset: 'Enterprise Cloud Appliance',
+      dimensions: '280 x 210 x 65 mm',
+      surface_material: 'matte',
+      pantone_accuracy: '99.4%',
+      barcode_gs1_compliance: 'quiet_zone_warning',
+      overall_dfm_score: 88
+    });
+  }
+
+  // 6j. Autonomous PR Crisis & Cease-and-Desist API
+  if (pathStr === 'crisis/incidents') {
+    return NextResponse.json({
+      active_crises_count: 2,
+      critical_viral_breaches: 1,
+      containment_status: 'escalated',
+      automated_cease_and_desist_ready: true,
+      last_dispatch_timestamp: new Date().toISOString()
+    });
+  }
+
+  // 6k. Competitor Counter-Strike & Ad Spy Intelligence API
+  if (pathStr === 'counterstrike/targets') {
+    return NextResponse.json({
+      monitored_competitors: ['Legacy Cloud Corp', 'HyperScale X', 'DataVantage Systems'],
+      unsubstantiated_claims_detected: 3,
+      highest_vulnerability_score: 92,
+      counter_campaigns_generated: 3
+    });
+  }
+
   // 7. Visual Presets
   if (pathStr === 'visual/presets') {
     return NextResponse.json([
